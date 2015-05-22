@@ -6,7 +6,5 @@ build/logs
 logs
 modules
 node_modules
-reports
-*.js
 *.log
 *.orig
