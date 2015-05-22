@@ -1,0 +1,9 @@
+# ignore dockerfiles
+.dockerignore
+Dockerfile
+
+# ignore source repository history
+.git
+
+# ignore other
+docs
