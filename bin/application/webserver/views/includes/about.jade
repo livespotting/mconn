@@ -1,0 +1,59 @@
+#about.modal.fade(tabindex='-1', role='dialog', aria-labelledby='about', aria-hidden='true')
+    .modal-dialog.modal-lg
+        .modal-content
+          .modal-header
+            button.close(type='button', data-dismiss='modal')
+              span(aria-hidden='true') &times;
+              span.sr-only Close
+            img(src='/images/logo.png', style='height:27px')
+          .modal-body
+            dl.dl-horizontal.dl-horizontal-lg
+              dt Version
+              dd #{mconnenv.version}
+            dl.dl-horizontal.dl-horizontal-lg
+              dt App ID
+              dd #{mconnenv.zk_path}
+              dt Leader
+              dd #{mconnenv.masterdata.serverdata.ip + ":" + mconnenv.masterdata.serverdata.port}
+            hr
+            dl.dl-horizontal.dl-horizontal-lg
+              dt Hostname
+              dd #{mconnenv.hostname}
+              dt Path
+              dd #{mconnenv.root_path}
+              dt Debug Modus
+              dd #{mconnenv.debug}
+            hr
+            dl.dl-horizontal.dl-horizontal-lg
+              dt Job Queue Timeout
+              dd #{mconnenv.jobqueue_timeout}
+              dt Job Queue Sync Time
+              dd #{mconnenv.jobqueue_sync_time}
+            hr
+            dl.dl-horizontal.dl-horizontal-lg
+              dt Module Path
+              dd #{mconnenv.module_path}
+              dt Module Prepare
+              dd #{mconnenv.module_prepare}
+              dt Module Start
+              dd #{mconnenv.module_start}
+            hr
+            dl.dl-horizontal.dl-horizontal-lg
+              dt Marathon Hosts
+              dd #{mconnenv.marathon_hosts}
+              dt Marathon SSL
+              dd #{mconnenv.marathon_ssl}
+            hr
+            dl.dl-horizontal.dl-horizontal-lg
+              dt Zk
+              dd zk://#{mconnenv.zk_hosts}#{mconnenv.zk_path}
+              dt Zk Hosts
+              dd #{mconnenv.zk_hosts}
+              dt Zk Path
+              dd #{mconnenv.zk_path}
+              dt Zk Session Timeout
+              dd #{mconnenv.zk_session_timeout}
+              dt Zk Spin Delay
+              dd #{mconnenv.zk_spin_delay}
+              dt Zk Connection Retries
+              dd #{mconnenv.zk_retries}

@@ -1,0 +1,31 @@
+extends ./layout.jade
+
+block extraheader
+    script(src='/js/index.js')
+
+block content
+
+    .row
+        .col-xs-12.col-sm-12
+            .bs-table
+                table.table.table-hover
+                    thead
+                        tr
+                            th App ID
+                            th(style='width:35%;') Task ID
+                            th Task Status
+                            th(style='width:25%;') Module State
+                            th.text-right Timestamp
+                    tbody(ng-controller="jobsController")
+                        tr(ng-repeat="job in jobs")
+                            td {{job.marathonData.appId}}
+                            td {{job.marathonData.taskId}}
+                            td {{job.marathonData.taskStatus}}
+                            td
+                                div(ng-repeat="state in job.states")
+                                    a(href="/modules/{{state.modulename}}/queue"): span.label.label-finished(ng-if="state.state=='finished'") {{state.modulename}}
+                                    a(href="/modules/{{state.modulename}}/queue"): span.label.label-enqueued(ng-if="state.state=='enqueued'") {{state.modulename}}
+                                    a(href="/modules/{{state.modulename}}/queue"): span.label.label-failed(ng-if="state.state=='failed'") {{state.modulename}}
+                                    a(href="/modules/{{state.modulename}}/queue"): span.label.label-started(ng-if="state.state=='started'") {{state.modulename}}
+                                    a(href="/modules/{{state.modulename}}/queue"): span.label.label-nopreset(ng-if="state.state=='nopreset'") {{state.modulename}}
+                            td.text-right {{job.marathonData.timestamp}}
