@@ -183,7 +183,7 @@ router.get "/v1/exit/leader", (req, res) ->
   MConnZookeeperHandler.getMasterData().then (masterdata) ->
     request = require("request")
     console.log masterdata
-    request(masterdata.serverdata.serverurl + "/v1/exit")
+    request(masterdata.serverdata.serverurl + "/v1/exit/node")
     res.end()
 
 # GET /v1/exit/node -> Kill the requested instance
