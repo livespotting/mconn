@@ -16,6 +16,8 @@ One of our targets has been a framework design that provides numerous custom pos
 * Web UI
 * JSON/Web API
 * JobQueue 
+ * API to react on incoming task events
+ * Inventory sync. (timeevent or by leader-election) to work fault-tolerance
 * Module-Management
 * HA
  * *Zookeeper as datastore for states and module presets*
