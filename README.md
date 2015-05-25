@@ -14,7 +14,7 @@ One of our targets has been a framework design that provides numerous custom pos
 #### Features
 
 * Web UI
-* JSON/Web API
+* [JSON/Web API](docs/webapi.md)
 * JobQueue 
  * API to react on incoming task events
  * Inventory sync. (timeevent or by leader-election) to work fault-tolerance
