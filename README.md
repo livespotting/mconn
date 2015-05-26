@@ -47,8 +47,8 @@ You have to assure that Mesos-DNS and each hostname can also be reached by Mesos
 | MCONN_PORT | ${PORT0} |
 | MCONN_MODULE_PATH | ${MESOS_SANDBOX} |
 | MCONN_MARATHON_HOSTS | leader.mesos:8080 |
-| ZK_HOSTS | leader.mesos:2181 |
-| ZK_PATH | ${MARATHON_APP_ID} |
+| MCONN_ZK_HOSTS | leader.mesos:2181 |
+| MCONN_ZK_PATH | ${MARATHON_APP_ID} |
 
 You can modify this with the following Marathon-Config:
 
