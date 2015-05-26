@@ -126,7 +126,7 @@ curl -X POST leader.mesos:8080/v2/eventSubscriptions?callbackUrl=http://mconn.ma
 First you have to add a preset for the HelloWorld-Module instructing the modul what to do with our demo-app:
 
 ```sh
-curl -H "Content-Type: application/json" -X POST -d '{"appId":"bridged-webapp","moduleName":"HelloWorld","status":"enabled","options":{"actions":{"add":"Moin, Moin","remove":"Tschues"}}}' http://mconn.marathon.mesos:31999/v1/module/preset
+curl -H "Content-Type: application/json" -X POST -d '{"appId":"/bridged-webapp","moduleName":"HelloWorld","status":"enabled","options":{"actions":{"add":"Moin, Moin","remove":"Tschues"}}}' http://mconn.marathon.mesos:31999/v1/module/preset
 ```
 The preset will generate a "Moin, Moin" if a task has got the status quo "TASK_RUNNING". It will generate a "Tschues", if the task is "TASK_FINISHED", "TASK_KILLED" or "TASK_FAILED".
 
