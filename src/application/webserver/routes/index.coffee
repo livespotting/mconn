@@ -60,23 +60,21 @@ router.get "/v1/module/list/:modulename", (req, res) ->
     res.statusCode = 500
   res.end()
 
-# GET /v1/module/jobqueue/pause/{moduleName} - stop jobqueue of selected module
+# POST /v1/module/jobqueue/pause/{moduleName} - stop jobqueue of selected module
 router.post "/v1/module/jobqueue/pause/:modulename", (req, res) ->
   modules = require("../../classes/MConnModule").modules
   if modules[req.params.modulename]?
-    logger.logInfo("APICALL: pause queue for #{req.params.modulename}" )
     modules[req.params.modulename].pause()
     res.json(modules[req.params.modulename])
   else
     res.statusCode = 500
   res.end()
 
-# GET /v1/module/jobqueue/resume/{moduleName} - resume jobqueue of selected module
+# POST /v1/module/jobqueue/resume/{moduleName} - resume jobqueue of selected module
 router.post "/v1/module/jobqueue/resume/:modulename", (req, res) ->
   modules = require("../../classes/MConnModule").modules
   if modules[req.params.modulename]?
-    logger.logInfo("APICALL: resume queue for #{req.params.modulename}" )
-    modules[req.params.modulename].pause()
+    modules[req.params.modulename].resume()
     res.json(modules[req.params.modulename])
   else
     res.statusCode = 500
