@@ -9,8 +9,8 @@ This is a pre-release! We can't guarantee that something you build today will wo
 * [Modules](#modules)
  * [GET /v1/module/list](#get-v1modulelist)
  * [GET /v1/module/list/{moduleId}](#get-v1modulelistmoduleid)
- * [GET /v1/module/jobqueue/pause/{moduleId}](#get-v1modulejobqueuepausemoduleid)
- * [GET /v1/module/jobqueue/resume/{moduleId}](#get-v1modulejobqueueresumemoduleid)
+ * [POST /v1/module/jobqueue/pause/{moduleId}](#post-v1modulejobqueuepausemoduleid)
+ * [POST /v1/module/jobqueue/resume/{moduleId}](#post-v1modulejobqueueresumemoduleid)
  * [GET /v1/module/preset](#get-v1modulepreset)
  * [GET /v1/module/preset/{moduleId}](#get-v1modulepresetmoduleid)
  * [POST /v1/module/preset](#post-v1modulepreset)
@@ -159,30 +159,66 @@ Response:
 }
 ```
 
-### GET /v1/module/jobqueue/pause/{moduleId}
+### POST /v1/module/jobqueue/pause/{moduleId}
 
 Request:
 ```sh
-GET /v1/module/jobqueue/pause/HelloWorld HTTP/1.1
+POST /v1/module/jobqueue/pause/HelloWorld HTTP/1.1
 Accept: */*
 ```
 
 Response:
-```sh
-ok
+```json
+{
+    "name": "HelloWorld",
+    "queue": {
+        "tasks": [],
+        "concurrency": 1,
+        "saturated": null,
+        "empty": null,
+        "drain": null,
+        "started": true,
+        "paused": true
+    },
+    "logger": {
+        "context": "MconnModule.HelloWorld"
+    },
+    "folder": "HelloWorld",
+    "options": {},
+    "timeout": 60000,
+    "currentJob": null
+}
 ```
 
-### GET /v1/module/jobqueue/resume/{moduleId}
+### POST /v1/module/jobqueue/resume/{moduleId}
 
 Request:
 ```sh
-GET /v1/module/jobqueue/resume/HelloWorld HTTP/1.1
+POST /v1/module/jobqueue/resume/HelloWorld HTTP/1.1
 Accept: */*
 ```
 
 Response:
-```sh
-ok
+```json
+{
+    "name": "HelloWorld",
+    "queue": {
+        "tasks": [],
+        "concurrency": 1,
+        "saturated": null,
+        "empty": null,
+        "drain": null,
+        "started": true,
+        "paused": false
+    },
+    "logger": {
+        "context": "MconnModule.HelloWorld"
+    },
+    "folder": "HelloWorld",
+    "options": {},
+    "timeout": 60000,
+    "currentJob": null
+}
 ```
 
 ### GET /v1/module/preset
