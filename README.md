@@ -64,7 +64,7 @@ You can modify this with the following Marathon-Config:
 
 [![Workflows](docs/img/readme-deployment.png)](https://github.com/datarhei/mconn)
 
-### Start MConn incl. the [HelloWorld-Example](https://github.com/livespotting/mconn-helloworld):
+### 1. Start MConn incl. the [HelloWorld-Example](https://github.com/livespotting/mconn-helloworld):
 
 The "uris"-paramenter in the following Marathon-Config will instruct Mesos to download the HelloWorkd-Example and extract it into the MESOS-SANDBOX:
  
@@ -118,14 +118,14 @@ After that call up the MConn UI at [mconn.marathon.mesos:31999](http://mconn.mar
 
 [![MConn UI DemoApp](docs/img/readme-ui-1.png)](https://github.com/datarhei/mconn)
 
-### Add MConn as a Marathon Event-Subscriber:
+### 2. Add MConn as a Marathon Event-Subscriber:
 
 To expand the "event_subscriber" on Marathon, start Marathon with "--event_subscriber http_callback" (more [here](https://mesosphere.github.io/marathon/docs/command-line-flags.html)) and afterwards install MConn as a HTTP-Endpoint:
 
 ```sh
 curl -X POST leader.mesos:8080/v2/eventSubscriptions?callbackUrl=http://mconn.marathon.mesos:31999/jobqueue
 ```
-### Start a Demo-Application:
+### 3. Start a Demo-Application:
 
 First you have to add a preset for the HelloWorld-Module instructing the modul what to do with our demo-app:
 
@@ -136,7 +136,7 @@ The preset will generate a "Moin, Moin" if a task has got the status quo "TASK_R
 
 [![MConn UI DemoApp](docs/img/readme-ui-2.png)](https://github.com/datarhei/mconn)
 
-Afterwards start the Demo-APP to see how the MConn-JobQueue-Management will work:
+Afterwards start the Demo-App to see how the MConn-JobQueue-Management will work:
 
 ```sh
 curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
