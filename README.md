@@ -116,7 +116,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
 
 After that call up the MConn UI at [mconn.marathon.mesos:31999](http://mconn.marathon.mesos:31999) (or get it from the Marathon UI)
 
-[![MConn UI DemoApp](docs/img/readme-ui-1.png)](https://github.com/datarhei/mconn)
+[![MConn UI DemoApp](docs/img/readme-ui-1.png)](https://github.com/livespotting/mconn)
 
 ### 2. Add MConn as a Marathon Event-Subscriber:
 
