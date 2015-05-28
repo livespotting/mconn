@@ -5,7 +5,7 @@ This is a pre-release for friends and colleagues to check code styles, functions
 
 --
 
-MConn is a HA JobQueue combined with a module management to work as an event-subscriber behind Mesosphere's [Marathon](https://github.com/mesosphere/marathon) to react on incoming task events and realize simple post processes (for Service-Discovery-Solutions) based on up/down scalings.
+MConn is an in [Coffee-Script](http://coffeescript.org) written HA JobQueue combined with a module management to work as an event-subscriber behind Mesosphere's [Marathon](https://github.com/mesosphere/marathon) to react on incoming task events and realize simple post processes (for Service-Discovery-Solutions) based on up/down scalings.
 
 [![Workflows](docs/img/mconn_example.png)](https://github.com/datarhei/mconn)
 
@@ -30,7 +30,7 @@ MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitat
 
 ## Demo-Deployment
 
-##### Requirements
+##### Requirements:
 
 * [Mesos](http://mesos.apache.org) (tested with 0.22.1)
 * [Marathon](https://github.com/mesosphere/marathon) (tested with 0.8.1)
@@ -59,6 +59,10 @@ You can modify this with the following Marathon-Config:
 }
 ```
 *Notice: MConn currently supports just one Marathon-Address*
+
+##### Deployment scheme:
+
+[![Workflows](docs/img/readme-deployment.png)](https://github.com/datarhei/mconn)
 
 ### Start MConn incl. the [HelloWorld-Example](https://github.com/livespotting/mconn-helloworld):
 
