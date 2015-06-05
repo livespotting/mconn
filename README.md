@@ -75,7 +75,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "livespotting/mconn:0.0.5",
+            "image": "livespotting/mconn:0.0.6",
             "network": "HOST"
         },
         "volumes": []
@@ -179,13 +179,14 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
 ```
 [![MConn UI DemoApp](docs/img/readme-ui-3.png)](https://github.com/datarhei/mconn)
 
-## Author / Contributors
+## Author
 
-Livespotting Media GmbH  
 * Christoph Johannsdotter
 * Jan Stabenow
 
 ## License
+
+(C) 2015 Livespotting Media GmbH  
 
 Apache License  
 Version 2.0, January 2004  
