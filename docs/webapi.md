@@ -20,8 +20,8 @@ This is a pre-release! We can't guarantee that something you build today will wo
  * [GET /v1/info](#get-v1info)
  * [GET /v1/leader](#get-v1leader)
  * [GET /v1/ping](#get-v1ping)
- * [GET /v1/exit/leader](#get-v1exitleader)
- * [GET /v1/exit/node](#get-v1exitnode)
+ * [POST /v1/exit/leader](#get-v1exitleader)
+ * [POST /v1/exit/node](#get-v1exitnode)
 
 ## JobQueue
 
