@@ -9,9 +9,5 @@
 # @author Jan Stabenow [j.stabenow@livespottingmedia.com]
 #
 
-App = require("./App")
-require("./webserver/config/config")
-JobQueue = require("./classes/JobQueue")
-
-App.checkEnvironment().then ->
-  App.initZookeeper()
+module.exports =
+{}

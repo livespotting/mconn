@@ -1,3 +1,14 @@
+#
+# MConn Framework
+# https://www.github.com/livespotting/mconn
+#
+# @copyright 2015 Livespotting Media GmbH
+# @license Apache-2.0
+#
+# @author Christoph Johannsdotter [c.johannsdotter@livespottingmedia.com]
+# @author Jan Stabenow [j.stabenow@livespottingmedia.com]
+#
+
 this.app.controller 'jobsController', [
   'ws'
   '$scope'
@@ -7,18 +18,11 @@ this.app.controller 'jobsController', [
     'use strict'
     ws.on 'connect', ->
       ws.emit 'getJobs', initial: true
+      ws.on 'gotMConnEnv', (mconnenv) ->
+          $scope.mconnenv = mconnenv
+          console.log mconnenv
       ws.on 'allJobs', (jobs) ->
         $scope.jobs = jobs
-        setTimeout ->
-          $('.tooltip-top').tooltip({
-            placement: 'top',
-            viewport: {selector: 'body', padding: 2}
-          })
-          $('.tooltip-viewport-top').tooltip({
-            placement: 'top',
-            viewport: {selector: '.container-viewport', padding: 2}
-          })
-        ,250
         totalJobsCount = if jobs.length then jobs.length else 0 # +1 for active element
         $scope.numberOfJobs = totalJobsCount
       ws.on 'updateJobTime', (time) ->
@@ -31,7 +35,6 @@ this.app.controller 'jobsController', [
     $scope.showQueue = ->
       resetOld()
       $(".navbar-nav li.queue").addClass("active")
-
     $scope.showLog = ->
       resetOld()
       $(".navbar-nav li.log").addClass("active")

@@ -1,16 +1,15 @@
-FROM node:0.12
+FROM node:0.12.4
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
-RUN apt-get update && \
-    apt-get install -y ant && \
-    npm install -g coffee-script
+RUN npm install -g coffee-script coffeelint grunt-cli
 
 WORKDIR /application
 COPY . /application
 
-RUN ant coffee-compile
-RUN ant node-modules
+RUN npm install
+
+RUN grunt build
 
 EXPOSE 1234
 

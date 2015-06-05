@@ -1,0 +1,34 @@
+nav.navbar.navbar-default.navbar-static-top(role='navigation')
+  .container
+      .navbar-header
+          button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='#navbar', aria-expanded='false', aria-controls='navbar')
+              span.sr-only Toggle navigation
+              span.icon-bar
+              span.icon-bar
+              span.icon-bar
+          a.navbar-brand(href='/')
+              img.logo(src='/images/logo.png')
+      #navbar.navbar-collapse.collapse
+          ul.nav.navbar-nav
+              each module in mconnenv.activatedModules
+                  if module.name == modulename
+                      li.active
+                          a(href='/modules/#{module.name}/main') #{module.name}
+                  else
+                      li
+                          a(href='/modules/#{module.name}/main') #{module.name}
+          ul.nav.navbar-nav.navbar-right(ng-controller="jobsController")
+              if modulename == 'home'
+                  li.active.queue
+                      a(href='/jobqueue', ng-click="showQueue()") Job Queue
+                          span.badge(ng-if="numberOfJobs != 0", class="ng-cloak") {{numberOfJobs}}
+              else
+                  li.ng-cloak.queue
+                      a(href='/jobqueue', ng-click="showQueue()") Job Queue
+                      span.badge(ng-if="numberOfJobs != 0", class="ng-cloak") {{numberOfJobs}}
+              li.about
+                  a(href='#', data-toggle='modal', data-target='#about') About
+              li.docs
+                  a(href='https://github.com/livespotting/mconn', target='_blank')
+                      | Docs
+                      span.glyphicon.glyphicon-link(aria-hidden='true')

@@ -1,0 +1,27 @@
+doctype html
+html(ng-app="app")
+  head
+    title MConn
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    link(rel='icon', type='image/x-icon', href='/images/favicon.ico')
+    link(rel='icon', type='image/png', href='/images/favicon.png')
+    each file in cssfiles
+        link(href='/#{file}', rel='stylesheet')
+    block extraheader
+    body
+        include includes/header
+        include includes/about
+        .hidden.master-url(data-masterurl="#{mconnenv.masterdata.serverdata.serverurl}")
+        .hidden.modulename(data-modulename="#{modulename}")
+        div.container
+            block content
+            if error
+                h1= message
+                h2= error.status
+                pre #{error.stack}
+        script(src='#{mconnenv.masterdata.serverdata.serverurl}/socket.io/socket.io.js')
+        each file in jsfiles
+            script(src='/#{file}')
+        block extrascripts

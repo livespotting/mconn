@@ -1,38 +1,38 @@
+#
+# MConn Framework
+# https://www.github.com/livespotting/mconn
+#
+# @copyright 2015 Livespotting Media GmbH
+# @license Apache-2.0
+#
+# @author Christoph Johannsdotter [c.johannsdotter@livespottingmedia.com]
+# @author Jan Stabenow [j.stabenow@livespottingmedia.com]
+#
+
 express = require("express")
 fs = require("fs")
-logger = require("../../classes/MConnLogger")("MConn.indexRouter")
+logger = require("../../classes/Logger")("MConn.indexRouter")
 Q = require("q")
 router = express.Router()
 
-registerWebsocketEvents = ->
-  # start sending to websockets, if ws ready...
-  app = require("../../App").app
-  unless app? then return
-  else
-    io = app.get("io")
-    unless io?.sockets?
-      return
-    else
-      io.on("connection", (socket) ->
-        require("./../../classes/MConnJobQueue").WS_SendAllJobs()
-      )
-
-setTimeout(registerWebsocketEvents, 1200)
 
 # Web UI Routes
 #
 
 # GET / -> /jobqueue
 router.get "/", (req, res) ->
-  modules = require("../../classes/MConnModule").modules
-  res.redirect('/jobqueue');
+  modules = require("../../classes/Module").modules
+  res.redirect('/jobqueue')
   res.end()
 
 # GET /jobqueue ui
 router.get "/jobqueue", (req, res) ->
+  if req.params.flush then cache = false else cache = "jobqueue"
   res.render("jobqueue",
+    filename: cache
     modulename: "home"
     mconnenv: req.mconnenv
+    cache: cache
   )
   res.end()
 
@@ -41,19 +41,19 @@ router.get "/jobqueue", (req, res) ->
 
 # GET /v1/jobqueue
 router.get "/v1/jobqueue", (req, res) ->
-  MConnJobQueue = require("../../classes/MConnJobQueue")
-  res.json(MConnJobQueue.createJobDataForWebview())
+  JobQueue = require("../../classes/JobQueue")
+  res.json(JobQueue.createJobDataForWebview())
   res.end()
 
 # GET /v1/module/list - list all modules and her settings
 router.get "/v1/module/list", (req, res) ->
-  modules = require("../../classes/MConnModule").modules
+  modules = require("../../classes/Module").modules
   res.json(modules)
   res.end()
 
 # GET /v1/module/list/{moduleName} - list selected module and her stats/config
 router.get "/v1/module/list/:modulename", (req, res) ->
-  modules = require("../../classes/MConnModule").modules
+  modules = require("../../classes/Module").modules
   if modules[req.params.modulename]?
     res.json(modules[req.params.modulename])
   else
@@ -62,7 +62,7 @@ router.get "/v1/module/list/:modulename", (req, res) ->
 
 # POST /v1/module/jobqueue/pause/{moduleName} - stop jobqueue of selected module
 router.post "/v1/module/jobqueue/pause/:modulename", (req, res) ->
-  modules = require("../../classes/MConnModule").modules
+  modules = require("../../classes/Module").modules
   if modules[req.params.modulename]?
     modules[req.params.modulename].pause()
     res.json(modules[req.params.modulename])
@@ -72,7 +72,7 @@ router.post "/v1/module/jobqueue/pause/:modulename", (req, res) ->
 
 # POST /v1/module/jobqueue/resume/{moduleName} - resume jobqueue of selected module
 router.post "/v1/module/jobqueue/resume/:modulename", (req, res) ->
-  modules = require("../../classes/MConnModule").modules
+  modules = require("../../classes/Module").modules
   if modules[req.params.modulename]?
     modules[req.params.modulename].resume()
     res.json(modules[req.params.modulename])
@@ -82,34 +82,34 @@ router.post "/v1/module/jobqueue/resume/:modulename", (req, res) ->
 
 # GET /v1/module/preset - get all presets
 router.get "/v1/module/preset", (req, res) ->
-  MConnModulePreset = require("../../classes/MConnModulePreset")
-  MConnModulePreset.getAll()
+  ModulePreset = require("../../classes/ModulePreset")
+  ModulePreset.getAll()
   .then (presets) ->
     res.json(presets)
   .catch (error) ->
-    logger.logError("GET on /preset " + error.toString(), "router.get preset")
+    logger.error("GET on /preset " + error.toString(), "router.get preset")
     res.statusCode = 500
   .finally ->
     res.end()
 
 # GET /v1/module/preset/{moduleName} - all presets of selected module
 router.get "/v1/module/preset/:modulename", (req, res) ->
-  MConnModulePreset = require("../../classes/MConnModulePreset")
-  MConnModulePreset.getAllOfModule(req.params.modulename)
+  ModulePreset = require("../../classes/ModulePreset")
+  ModulePreset.getAllOfModule(req.params.modulename)
   .then (presets) ->
     res.json(presets)
   .catch (error) ->
-    logger.logError("GET on /preset " + error.toString(), "router.get preset")
+    logger.error("GET on /preset " + error.toString(), "router.get preset")
     res.statusCode = 500
   .finally ->
     res.end()
 
 # POST /v1/module/preset - post a new preset to presetstore
 router.post "/v1/module/preset", (req, res) ->
-  MConnModulePreset = require("../../classes/MConnModulePreset")
+  ModulePreset = require("../../classes/ModulePreset")
   try
     preset = [req.body]
-    MConnModulePreset.sync(
+    ModulePreset.sync(
       ->
         Q.resolve(preset)
     , allwaysUpdate = true)
@@ -122,10 +122,10 @@ router.post "/v1/module/preset", (req, res) ->
 
 # PUT /v1/module/preset - update a preset of a module
 router.put "/v1/module/preset", (req, res) ->
-  MConnModulePreset = require("../../classes/MConnModulePreset")
+  ModulePreset = require("../../classes/ModulePreset")
   try
     preset = [req.body]
-    MConnModulePreset.sync(
+    ModulePreset.sync(
       ->
         Q.resolve(preset)
     , allwaysUpdate = true)
@@ -138,14 +138,14 @@ router.put "/v1/module/preset", (req, res) ->
 
 # DELETE /v1/module/preset - delete a preset of a module
 router.delete "/v1/module/preset", (req, res) ->
-  MConnModulePreset = require("../../classes/MConnModulePreset")
+  ModulePreset = require("../../classes/ModulePreset")
   preset = [req.body]
-  MConnModulePreset.remove(preset)
+  ModulePreset.remove(preset)
   .then ->
     res.send("ok")
   .catch (error) ->
     res.statusCode = 500
-    logger.logError("DELETE on /preset: " + error, "router.delete /preset")
+    logger.error("DELETE on /preset: " + error, "router.delete /preset")
   .finally ->
     res.end()
 
@@ -166,28 +166,26 @@ router.get "/v1/leader", (req, res) ->
   res.json(
     leader: req.mconnenv.masterdata.serverdata.ip + ":" + req.mconnenv.masterdata.serverdata.port
   )
-  logger.logInfo("GET /v1/leader" )
   res.end()
 
 # GET /v1/ping - for healthchecks
 router.get "/v1/ping", (req, res) ->
   res.send("pong")
-  logger.logInfo("GET /v1/ping" )
   res.end()
 
-# GET /v1/exit/leader -> Kill the leading master
-router.get "/v1/exit/leader", (req, res) ->
-  MConnZookeeperHandler = require("../../classes/MConnZookeeperHandler")
-  MConnZookeeperHandler.getMasterData().then (masterdata) ->
+# POST /v1/exit/leader -> Kill the leading master
+router.post "/v1/exit/leader", (req, res) ->
+  ZookeeperHandler = require("../../classes/ZookeeperHandler")
+  ZookeeperHandler.getMasterData().then (masterdata) ->
     request = require("request")
-    console.log masterdata
-    request(masterdata.serverdata.serverurl + "/v1/exit/node")
+    request.post(masterdata.serverdata.serverurl + "/v1/exit/node")
     res.end()
 
-# GET /v1/exit/node -> Kill the requested instance
-router.get "/v1/exit/node", (req, res) ->
+# POST /v1/exit/node -> Kill the requested instance
+router.post "/v1/exit/node", (req, res) ->
   res.end()
   process.exit()
+
 
 #  TEMP FOR DEVELOPMENT
 #

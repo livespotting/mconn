@@ -1,10 +1,21 @@
+#
+# MConn Framework
+# https://www.github.com/livespotting/mconn
+#
+# @copyright 2015 Livespotting Media GmbH
+# @license Apache-2.0
+#
+# @author Christoph Johannsdotter [c.johannsdotter@livespottingmedia.com]
+# @author Jan Stabenow [j.stabenow@livespottingmedia.com]
+#
+
 express = require("express")
-logger = require("./classes/MConnLogger")("MConn")
 Q = require("q")
 require("colors")
 
-MConnMiddlewares = require("./classes/MConnMiddlewares")
-MConnModule = require("./classes/MConnModule")
+logger = require("./classes/Logger")("App")
+Middlewares = require("./classes/Middlewares")
+Module = require("./classes/Module")
 
 # Holds all relevant data like app globals, webserver and init-processes
 #
@@ -63,7 +74,7 @@ class App
   ,
     name: "MCONN_ZK_PATH"
     required: false
-    default: if process.env.MARATHON_APP_ID then process.env.MARATHON_APP_ID  else "/mconn"
+    default: if process.env.MARATHON_APP_ID then process.env.MARATHON_APP_ID else "/mconn"
     description: "Zookeeper node path"
   ,
     name: "MCONN_ZK_SESSION_TIMEOUT"
@@ -94,24 +105,24 @@ class App
 
   # delayed requirement of ZookeeperHandler
   #
-  @MConnZookeeperHandler: ->
-    require("./classes/MConnZookeeperHandler")
+  @ZookeeperHandler: ->
+    require("./classes/ZookeeperHandler")
 
   # check environment and set defaults, if env-vars are not set
   #
   @checkEnvironment: ->
-    logger.debug("INFO","Check enviroments")
+    logger.debug("INFO", "Check enviroments")
     return Q.fcall =>
       killProcess = false
       for e in @env_vars
         if process.env[e.name]?
-          logger.logInfo("ENV \"#{e.name}=" + process.env[e.name] + "\", #{e.description}")
+          logger.info("ENV \"#{e.name}=" + process.env[e.name] + "\", #{e.description}")
         else if e.required
           console.log ("No value set for env #{e.name}, but it is required!").red.bold
           killProcess = true
         else
           process.env[e.name] = e.default
-          logger.logInfo("ENV \"#{e.name}=#{e.default}\", default value, #{e.description}")
+          logger.info("ENV \"#{e.name}=#{e.default}\", default value, #{e.description}")
       if killProcess
         console.log ("MConn stops because required env-vars are not set").red.bold
         process.kill()
@@ -120,10 +131,10 @@ class App
   # connect to zookeeper and register events
   #
   @initZookeeper: ->
-    logger.debug("INFO","Initiate MConnZookeeperHandler")
-    MConnZookeeperHandler = require("./classes/MConnZookeeperHandler")
-    MConnZookeeperHandler.registerEvents()
-    MConnZookeeperHandler.connect()
+    logger.debug("INFO", "Initiate ZookeeperHandler")
+    ZookeeperHandler = require("./classes/ZookeeperHandler")
+    ZookeeperHandler.registerEvents()
+    ZookeeperHandler.connect()
 
   # router to hold all routes defined by modules
   @moduleRouter: express.Router()
@@ -136,8 +147,58 @@ class App
 
   # load all modules
   @initModules: ->
-    logger.debug("INFO","Initiate MConnModule")
-    return MConnModule.loadModules(@moduleRouter, @expressStatics)
+    logger.debug("INFO", "Initiate Module")
+    return Module.loadModules(@moduleRouter, @expressStatics)
+
+  @renderApplication: ->
+    logger.info("Rendering main layout")
+    deferred = Q.defer()
+    jade = require("jade")
+    Middlewares = require("./classes/Middlewares")
+    Middlewares.ZookeeperHandler().getMasterData()
+    .then (masterdata) =>
+      activatedModules = require("./classes/Module").modules
+      mconnenv =
+        masterdata: masterdata
+        activatedModules: activatedModules
+        version: process.env.npm_package_version
+        hostname: process.env.HOSTNAME
+        host: process.env.MCONN_HOST
+        port: process.env.MCONN_PORT
+        root_path: process.env.MCONN_PATH
+        debug: process.env.MCONN_DEBUG
+        jobqueue_timeout: process.env.MCONN_JOBQUEUE_TIMEOUT
+        jobqueue_sync_time: process.env.MCONN_JOBQUEUE_SYNC_TIME
+        module_path: process.env.MCONN_MODULE_PATH
+        module_start: process.env.MCONN_MODULE_START
+        module_prepare: process.env.MCONN_MODULE_PREPARE
+        marathon_hosts: process.env.MCONN_MARATHON_HOSTS
+        marathon_ssl: process.env.MCONN_MARATHON_SSL
+        zk_hosts: process.env.MCONN_ZK_HOSTS
+        zk_path: process.env.MCONN_ZK_PATH
+        zk_session_timeout: process.env.MCONN_ZK_SESSION_TIMEOUT
+        zk_spin_delay: process.env.MCONN_ZK_SPIN_DELAY
+        zk_retries: process.env.MCONN_ZK_RETRIES
+      html = jade.renderFile(__dirname + '/webserver/views/jobqueue.jade',
+        modulename: "home"
+        mconnenv: mconnenv
+      )
+      @app.set("cachedLayout", html)
+      logger.info("rendering main layout done")
+      deferred.resolve()
+    .catch (error) ->
+      logger.error("Error rendering main layout: " + error)
+      deferred.resolve()
+    deferred.promise
+  @registerWebsocketEvents: (io) ->
+    modules = require("./classes/Module").modules
+    for modulename, module of modules
+      io.of("/#{modulename}").on("connection", (socket) ->
+        require("./classes/JobQueue").WS_SendAllJobs(socket)
+      )
+    io.of("/home").on("connection", (socket) ->
+      require("./classes/JobQueue").WS_SendAllJobs(socket)
+    )
 
   # start the webserver
   #
@@ -145,11 +206,17 @@ class App
   #
   @startWebserver: (port = process.env.MCONN_PORT) ->
     try
-      logger.debug("INFO","Initiate webserver")
+      logger.debug("INFO", "Initiate webserver")
       path = require("path")
       cookieParser = require("cookie-parser")
       bodyParser = require("body-parser")
+      config = require("./webserver/config/config")
+      compression = require("compression")
+      oneYear = 31536000
+      @app.locals.jsfiles = config.getJavascriptFiles()
+      @app.locals.cssfiles = config.getCssFiles()
       routes = require("./webserver/routes/index")
+
 
       # view engine setup
       @app.set "views", path.join(__dirname, "webserver/views")
@@ -169,26 +236,26 @@ class App
           url = (req.originalUrl || req.url)
           method = req.method
           if len isnt ''
-            logger.logInfo("#{method} \"#{url}\" #{code} #{duration}ms")
+            logger.info("#{method} \"#{url}\" #{code} #{duration}ms")
           else
-            logger.logInfo("#{method} \"#{url}\" #{code} #{duration}ms")
+            logger.info("#{method} \"#{url}\" #{code} #{duration}ms")
         res.on "finish", log
         res.on "close", log
         next()
 
       @app.use bodyParser.json()
-      @app.use bodyParser.urlencoded()
+      @app.use bodyParser.urlencoded({extended: true})
       @app.use cookieParser()
-
+      @app.use compression()
       # add middlewares
-      @app.use MConnMiddlewares.appendMasterDataToRequest
-      @app.use "/v1/jobqueue", MConnMiddlewares.appendIsMasterToRequest
-      @app.post "/v1/jobqueue", MConnMiddlewares.checkRequestIsValid
-      @app.post "/v1/jobqueue", MConnMiddlewares.route
-      @app.post "/v1/jobqueue", MConnMiddlewares.sendRequestToQueue
+      @app.use Middlewares.appendMasterDataToRequest
+      @app.use "/v1/jobqueue", Middlewares.appendIsMasterToRequest
+      @app.post "/v1/jobqueue", Middlewares.checkRequestIsValid
+      @app.post "/v1/jobqueue", Middlewares.route
+      @app.post "/v1/jobqueue", Middlewares.sendRequestToQueue
       for modulename, staticPath of @expressStatics
-        @app.use "/#{modulename}/", express.static(staticPath)
-      @app.use express.static(path.join(__dirname, "webserver/public"))
+        @app.use "/#{modulename}/", express.static(staticPath, {maxage: oneYear})
+      @app.use express.static(path.join(__dirname, "webserver/public"), {maxage: oneYear})
       @app.use "/", @moduleRouter
       @app.use "/", routes
 
@@ -197,22 +264,25 @@ class App
         err = new Error("Not Found")
         err.status = 404
         next err
-        return
 
       # production error handler
       # no stacktraces leaked to user
       @app.use (err, req, res, next) ->
         res.status err.status or 500
+        logger.error(err + ": " + req.url)
         res.send("{\"message\":\"URI not found: " + req.url + "\"}")
         res.end()
 
       http = require('http')
 
       server = http.createServer(@app).listen(port)
-      @app.set("io", require('socket.io').listen(server))
-      logger.logInfo("Webserver started on \"" + process.env.MCONN_HOST + ":" + process.env.MCONN_PORT + "\"")
-      logger.logInfo("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
+      io = require('socket.io').listen(server)
+      @app.set("io", io)
+      @registerWebsocketEvents(io)
+      logger.info("Webserver started on \"" + process.env.MCONN_HOST + ":" + process.env.MCONN_PORT + "\"")
+      logger.info("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
     catch error
-      console.log "error", error
+      console.log error
+
 
 module.exports = App
