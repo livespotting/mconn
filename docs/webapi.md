@@ -409,11 +409,11 @@ Response:
 pong
 ```
 
-### GET /v1/exit/leader
+### POST /v1/exit/leader
 
 Request:
 ```sh
-GET /v1/exit/leader HTTP/1.1
+POST /v1/exit/leader HTTP/1.1
 Accept: */*
 ```
 
@@ -422,11 +422,11 @@ Response:
 ok
 ```
 
-### GET /v1/exit/node
+### POST /v1/exit/node
 
 Request:
 ```sh
-GET /v1/exit/node HTTP/1.1
+POST /v1/exit/node HTTP/1.1
 Accept: */*
 ```
 
