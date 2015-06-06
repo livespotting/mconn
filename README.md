@@ -181,8 +181,8 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
 
 ## Author
 
-* Christoph Johannsdotter
-* Jan Stabenow
+* [Christoph Johannsdotter](https://github.com/christophjohannsdotter)
+* [Jan Stabenow](https://github.com/jstabenow)
 
 ## License
 
