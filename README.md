@@ -86,7 +86,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     "instances": 3,
     "healthChecks": [
         {
-            "path": "/",
+            "path": "/v1/ping",
             "portIndex": 0,
             "protocol": "HTTP",
             "gracePeriodSeconds": 30,
