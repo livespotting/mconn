@@ -3,4 +3,4 @@ before_script:
   - npm install -g coffee-script coffeelint grunt-cli
 node_js:
   - "0.12"
-script: npm install && grunt  build && npm start
+script: npm install && grunt  build
