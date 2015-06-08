@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/livespotting/mconn.svg?branch=master)](https://travis-ci.org/livespotting/mconn)  
+[![Build Status](https://travis-ci.org/livespotting/mconn.svg?branch=master)](https://travis-ci.org/livespotting/mconn) [![Coffeedoc](docs/img/coffeedoc.png)](http://coffeedoc.info/github/livespotting/mconn/master/)  
+
 
 # [![MConn](docs/img/mconn_logo_small.png)](https://github.com/datarhei/mconn) MConn
 
