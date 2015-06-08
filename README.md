@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/livespotting/mconn.svg?branch=master)](https://travis-ci.org/livespotting/mconn)  
+
 # [![MConn](docs/img/mconn_logo_small.png)](https://github.com/datarhei/mconn) MConn
 
 **Notice:**  
