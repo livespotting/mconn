@@ -1,0 +1,7 @@
+--name       "MConn"
+--title      "MConn Documentation"
+--quiet
+--extension  coffee
+--output     ./docs/codo
+./src
+-
