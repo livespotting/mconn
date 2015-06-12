@@ -20,7 +20,7 @@ One of our targets has been a framework design that provides numerous custom pos
 * [JSON/Web API](docs/webapi.md)
 * JobQueue 
  * API to react on incoming task events
- * Inventory sync. (timeevent or by leader-election) to work fault-tolerance
+ * Inventory sync. (timeeven, mconn-leader-election, marathon leader-election or by apicall) to work fault-tolerance
 * Module-Management
 * HA
  * *Zookeeper as datastore for states and module presets*
@@ -78,7 +78,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "livespotting/mconn:0.0.6",
+            "image": "livespotting/mconn:0.0.7",
             "network": "HOST"
         },
         "volumes": []
