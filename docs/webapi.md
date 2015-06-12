@@ -16,6 +16,8 @@ This is a pre-release! We can't guarantee that something you build today will wo
  * [POST /v1/module/preset](#post-v1modulepreset)
  * [PUT /v1/module/preset](#put-v1modulepreset)
  * [DELETE /v1/module/preset](#delete-v1modulepreset)
+ * [POST /v1/module/sync](#post-v1modulesync)
+ * [POST /v1/module/sync/{moduleId}](#post-v1modulesyncmoduleid)
 * [System](#system)
  * [GET /v1/info](#get-v1info)
  * [GET /v1/leader](#get-v1leader)
@@ -338,6 +340,32 @@ Content-Type: application/json; charset=utf-8
     "appId": "/bridged-webapp",
     "moduleName": "HelloWorld"
 }
+```
+
+Response:
+```sh
+ok
+```
+
+### POST /v1/module/sync
+
+Request:
+```sh
+POST  /v1/module/sync HTTP/1.1
+Accept: */*
+```
+
+Response:
+```sh
+ok
+```
+
+### POST /v1/module/sync/{moduleId}
+
+Request:
+```sh
+POST  /v1/module/HelloWorld HTTP/1.1
+Accept: */*
 ```
 
 Response:
