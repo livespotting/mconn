@@ -1,31 +1,24 @@
-extends layout
-
-block extraheader
-
-
-block content
-
-    .row
-        .col-xs-12.col-sm-12
-            .bs-table
-                table.table.table-hovern
-                    thead
-                        tr
-                            th App ID
-                            th(style='width:35%;') Task ID
-                            th Task Status
-                            th(style='width:25%;') Module State
-                            th.text-right Timestamp
-                    tbody(ng-controller="jobsController", class="ng-cloak")
-                        tr(ng-repeat="job in jobs")
-                            td {{job.marathonData.appId}}
-                            td {{job.marathonData.taskId}}
-                            td {{job.marathonData.taskStatus}}
-                            td
-                                div(ng-repeat="state in job.moduleState")
-                                    a(href="/modules/{{state.name}}/queue"): span.label.label-finished(ng-if="state.state=='finished'") {{state.name}}
-                                    a(href="/modules/{{state.name}}/queue"): span.label.label-idle(ng-if="state.state=='idle'") {{state.name}}
-                                    a(href="/modules/{{state.name}}/queue"): span.label.label-failed(ng-if="state.state=='failed'") {{state.name}}
-                                    a(href="/modules/{{state.name}}/queue"): span.label.label-started(ng-if="state.state=='started'") {{state.name}}
-                                    a(href="/modules/{{state.name}}/queue"): span.label.label-nopreset(ng-if="state.state=='nopreset'") {{state.name}}
-                            td.text-right {{job.marathonData.timestamp}}
+.row
+    .col-xs-12.col-sm-12
+        .bs-table
+            table.table.table-hovern
+                thead
+                    tr
+                        th App ID
+                        th(style='width:35%;') Task ID
+                        th Task Status
+                        th(style='width:25%;') Module State
+                        th.text-right Timestamp
+                tbody(class="ng-cloak")
+                    tr(ng-repeat="job in jobs")
+                        td {{job.marathonData.appId}}
+                        td {{job.marathonData.taskId}}
+                        td {{job.marathonData.taskStatus}}
+                        td
+                            div(ng-repeat="state in job.moduleState")
+                                a(href="/modules/{{state.name}}/queue"): span.label.label-finished(ng-if="state.state=='finished'") {{state.name}}
+                                a(href="/modules/{{state.name}}/queue"): span.label.label-idle(ng-if="state.state=='idle'") {{state.name}}
+                                a(href="/modules/{{state.name}}/queue"): span.label.label-failed(ng-if="state.state=='failed'") {{state.name}}
+                                a(href="/modules/{{state.name}}/queue"): span.label.label-started(ng-if="state.state=='started'") {{state.name}}
+                                a(href="/modules/{{state.name}}/queue"): span.label.label-nopreset(ng-if="state.state=='nopreset'") {{state.name}}
+                        td.text-right {{job.marathonData.timestamp}}

@@ -149,47 +149,7 @@ class App
   @initModules: ->
     logger.debug("INFO", "Initiate Module")
     return Module.loadModules(@moduleRouter, @expressStatics)
-
-  @renderApplication: ->
-    logger.info("Rendering main layout")
-    deferred = Q.defer()
-    jade = require("jade")
-    Middlewares = require("./classes/Middlewares")
-    Middlewares.ZookeeperHandler().getMasterData()
-    .then (masterdata) =>
-      activatedModules = require("./classes/Module").modules
-      mconnenv =
-        masterdata: masterdata
-        activatedModules: activatedModules
-        version: process.env.npm_package_version
-        hostname: process.env.HOSTNAME
-        host: process.env.MCONN_HOST
-        port: process.env.MCONN_PORT
-        root_path: process.env.MCONN_PATH
-        debug: process.env.MCONN_DEBUG
-        jobqueue_timeout: process.env.MCONN_JOBQUEUE_TIMEOUT
-        jobqueue_sync_time: process.env.MCONN_JOBQUEUE_SYNC_TIME
-        module_path: process.env.MCONN_MODULE_PATH
-        module_start: process.env.MCONN_MODULE_START
-        module_prepare: process.env.MCONN_MODULE_PREPARE
-        marathon_hosts: process.env.MCONN_MARATHON_HOSTS
-        marathon_ssl: process.env.MCONN_MARATHON_SSL
-        zk_hosts: process.env.MCONN_ZK_HOSTS
-        zk_path: process.env.MCONN_ZK_PATH
-        zk_session_timeout: process.env.MCONN_ZK_SESSION_TIMEOUT
-        zk_spin_delay: process.env.MCONN_ZK_SPIN_DELAY
-        zk_retries: process.env.MCONN_ZK_RETRIES
-      html = jade.renderFile(__dirname + '/webserver/views/jobqueue.jade',
-        modulename: "home"
-        mconnenv: mconnenv
-      )
-      @app.set("cachedLayout", html)
-      logger.info("rendering main layout done")
-      deferred.resolve()
-    .catch (error) ->
-      logger.error("Error rendering main layout: " + error)
-      deferred.resolve()
-    deferred.promise
+  # register all websocket events
   @registerWebsocketEvents: (io) ->
     modules = require("./classes/Module").modules
     for modulename, module of modules
@@ -207,51 +167,36 @@ class App
   @startWebserver: (port = process.env.MCONN_PORT) ->
     try
       logger.debug("INFO", "Initiate webserver")
+      Module = require("./classes/Module")
+      ZookeeperHandler = require("./classes/ZookeeperHandler")
+      routes = require("./webserver/routes/index")
       path = require("path")
       cookieParser = require("cookie-parser")
       bodyParser = require("body-parser")
       config = require("./webserver/config/config")
       compression = require("compression")
       oneYear = 31536000
+      @app.locals.mconnenv2 = "ladida"
       @app.locals.jsfiles = config.getJavascriptFiles()
       @app.locals.cssfiles = config.getCssFiles()
-      routes = require("./webserver/routes/index")
-
+      @app.locals.basedir = path.join(__dirname, "webserver/views")
 
       # view engine setup
       @app.set "views", path.join(__dirname, "webserver/views")
       @app.set 'json spaces', 4
       @app.set "view engine", "jade"
-      @app.locals.basedir = path.join(__dirname, "webserver/views")
-
-      # MConn Express Logger
-      @app.use (req, res, next) ->
-        bytes = require('bytes')
-        req._startTime = new Date
-        log = ->
-          code = res.statusCode
-          len = parseInt(res.getHeader('Content-Length'), 10)
-          if isNaN(len) then len = '' else len = ' - ' + bytes(len)
-          duration = (new Date - req._startTime)
-          url = (req.originalUrl || req.url)
-          method = req.method
-          if len isnt ''
-            logger.info("#{method} \"#{url}\" #{code} #{duration}ms")
-          else
-            logger.info("#{method} \"#{url}\" #{code} #{duration}ms")
-        res.on "finish", log
-        res.on "close", log
-        next()
 
       @app.use bodyParser.json()
       @app.use bodyParser.urlencoded({extended: true})
       @app.use cookieParser()
       @app.use compression()
       # add middlewares
+      @app.use Middlewares.expressLogger
       @app.use Middlewares.appendMasterDataToRequest
       @app.use "/v1/jobqueue", Middlewares.appendIsMasterToRequest
+      @app.post /v1/, Middlewares.route
+      @app.get "/v1/jobqueue", Middlewares.route
       @app.post "/v1/jobqueue", Middlewares.checkRequestIsValid
-      @app.post "/v1/jobqueue", Middlewares.route
       @app.post "/v1/jobqueue", Middlewares.sendRequestToQueue
       for modulename, staticPath of @expressStatics
         @app.use "/#{modulename}/", express.static(staticPath, {maxage: oneYear})
@@ -283,6 +228,5 @@ class App
       logger.info("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
     catch error
       console.log error
-
 
 module.exports = App

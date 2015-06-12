@@ -34,6 +34,8 @@ class Module
   # options of this module (initiated on init())
   options: null
 
+  syncInProgress: false
+
   # queue of this module (initiated on init())
   queue: null
 
@@ -48,10 +50,10 @@ class Module
   #
   constructor: (@name, @active) ->
     @queue = async.queue @worker.bind(@)
-    @logger = require("./Logger")("MconnModule.#{@name}")
+    @logger = require("./Logger")("Module.#{@name}")
     @router = express.Router()
     unless typeof @cleanUpInventory is "function"
-      logger.error("method 'cleanUpInventory' missing, sync process will NOT WORK", "MconnModule.#{@name}")
+      logger.error("method 'cleanUpInventory' missing, sync process will NOT WORK", "Module.#{@name}")
     else unless process.env.MCONN_MARATHON_HOSTS
       logger.error("\"MCONN_MARATHON_HOSTS\" environment is missing, sync process will not work")
     else
@@ -64,15 +66,18 @@ class Module
   #
   doSync: ->
     deferred = Q.defer()
-    @pause()
-    @compareWithMarathon()
-    .then (result) =>
-      @cleanUpInventory(result)
-    .catch (error) =>
-      @logger.error("Error on doSync(): " + error  + " " + error.stack)
-    .finally =>
-      @resume()
-      deferred.resolve()
+    unless @syncInProgress
+      @syncInProgress = true
+      @pause()
+      @compareWithMarathon()
+      .then (result) =>
+        @cleanUpInventory(result)
+      .catch (error) =>
+        @logger.error("Error on doSync(): " + error  + " " + error.stack)
+      .finally =>
+        @syncInProgress = false
+        @resume()
+        deferred.resolve()
     deferred.promise
 
   # start syncing interval, repeats sync-process every @syncInterval ms
@@ -105,6 +110,117 @@ class Module
     )
     deferred.promise
 
+  # check if Task exists on marathon inventory
+  #
+  # @param [Object] moduleInventory
+  # @param [String] taskId
+  # @return [Boolean]
+  #
+  taskExistsInModuleInventory: (moduleInventory, taskId) ->
+    for o in moduleInventory
+      if taskId is o.data.jobData.data.fromMarathonEvent.taskId then return true
+    return false #taskId not found in moduleInventory
+
+  taskExistsInMarathonInventory: (marathonInventory, taskId) ->
+    for m in marathonInventory.tasks
+      if m.id is taskId then return true
+    return false # not found
+
+  # check if given task is queued or in Progress
+  #
+  # @param [Job] job to check
+  # @return [Boolean]
+  #
+  taskIsQueuedOrInProgress: (job) ->
+    alreadyInQueue = false
+    for task in @queue.tasks
+      if task.data.data.fromMarathonEvent.taskId is job.data.fromMarathonEvent.taskId
+        @logger.debug("INFO", "Found missing job #{task.data.data.fromMarathonEvent.taskId} in jobqueue")
+        alreadyInQueue = true
+    if @currentJob and
+    @currentJob.data.fromMarathonEvent.taskId is job.data.fromMarathonEvent.taskId and
+    @currentJob.state isnt "finished" and
+    @currentJob.state isnt "failed" and
+    @currentJob.state isnt "nopreset"
+      @logger.debug("INFO", "Found missing job #{@currentJob.data.fromMarathonEvent.taskId} on current modules worker")
+      alreadyInQueue = true
+    return alreadyInQueue
+
+  # check if preset with given appId exists for this module
+  #
+  # @param [String] appId
+  # @return [Promise] resolves with boolean
+  #
+  presetExistsInModule: (appId) ->
+    deferred = Q.defer()
+    ModulePreset = require("./ModulePreset")
+    ModulePreset.getAllOfModule(@name).then (presets) ->
+      moduleHasPreset = false
+      for preset in presets
+        if preset.appId is appId then moduleHasPreset = true
+      deferred.resolve(moduleHasPreset)
+    deferred.promise
+
+  # get wrong tasks, that are missing on marathon inventory, but exist on local inventory
+  #
+  # @param [Object] marathonInventory current marathon inventory
+  # @param [Object] moduleInventory inventory of this module
+  # @return [Promise] resolving with array of wrong tasks
+  #
+  getWrongTasks: (marathonInventory, moduleInventory) =>
+    deferred = Q.defer()
+    wrong = []
+    async.each moduleInventory, (task, done) =>
+      unless @taskExistsInMarathonInventory(marathonInventory, task.data.jobData.data.fromMarathonEvent.taskId)
+        job = Job.load(task.data.jobData.data, cleanupTask = true)
+        if @taskIsQueuedOrInProgress(job)
+          @logger.info "Job #{job.data.fromMarathonEvent.taskId} does not have to be cleaned up, since it already exists in current jobqueue"
+          done()
+        else
+          @presetExistsInModule(job.data.fromMarathonEvent.appId).then (exists) =>
+            unless exists
+              @logger.debug("INFO","Ignoring job #{job.data.fromMarathonEvent.appId}, preset not found for module #{@name}")
+            else
+              wrong.push(job)
+            done()
+      else
+        done()
+    , =>
+      for o in wrong
+        @logger.info "\"" + o.data.fromMarathonEvent.taskId  + "\" is wrong on inventory for module \"#{@name}\"", "Module.#{@name}"
+      deferred.resolve(wrong)
+    deferred.promise
+
+  # get missing tasks, that are missing on local inventory, but exist on marathon inventory
+  #
+  # @param [Object] marathonInventory current marathon inventory
+  # @param [Object] moduleInventory inventory of this module
+  # @return [Promise] resolving with array of missing tasks
+  #
+  getMissingTasks: (marathonInventory, moduleInventory) =>
+    deferred = Q.defer()
+    missing = []
+    async.each marathonInventory.tasks, (task, done) =>
+      unless @taskExistsInModuleInventory(moduleInventory, task.id)
+        job = Job.createFromMarathonInventory(task, cleanupTask = true)
+        if @taskIsQueuedOrInProgress(job)
+          @logger.info "Job #{job.data.fromMarathonEvent.taskId} does not have to be cleaned up, since it already exists in current jobqueue"
+          done()
+        else
+          @presetExistsInModule(job.data.fromMarathonEvent.appId).then (exists) =>
+            unless exists
+              @logger.debug("INFO","Ignoring job #{job.data.fromMarathonEvent.appId}, preset not found for module #{@name}")
+            else
+              missing.push(job)
+            done()
+      else
+        done()
+    , =>
+      for m in missing
+        @logger.info "\"" + m.data.fromMarathonEvent.taskId  + "\" is missing on inventory for module \"#{@name}\"", "Module.#{@name}"
+      deferred.resolve(missing)
+    deferred.promise
+
   # compare own inventory with marathon inventory and resolves the promise with an object of missing and wrong tasks
   #
   # @return [Promise] resolves with object {missing: [Job], wrong: [Job]}
@@ -115,72 +231,24 @@ class Module
     @pause()
     Job = require("./Job")
     marathonInventory = null
-    availablePresets = null
-    ModulePreset = require("./ModulePreset")
-    ModulePreset.getAllOfModule(@name).then (presets) =>
-      availablePresets = presets
-      @getMarathonInventory()
+    moduleInventory = null
+    wrongTasks = null
+    missingTasks = null
+    @getMarathonInventory()
     .then (MI) =>
       marathonInventory = MI
       @getInventory()
-    .then (ownInventory) =>
-      missing = []
-      for m in marathonInventory.tasks
-        do (m) =>
-          found = false
-          for o in ownInventory
-            if m.id is o.data.jobData.data.fromMarathonEvent.taskId then found = true
-          unless found
-            job = Job.createFromMarathonInventory(m)
-            job.cleanup = true
-            alreadyInQueue = false
-            for task in @queue.tasks
-              if task.data.data.fromMarathonEvent.taskId is job.data.fromMarathonEvent.taskId
-                @logger.debug("INFO", "Found missing job #{task.data.data.fromMarathonEvent.taskId} in jobqueue")
-                alreadyInQueue = true
-            if (@currentJob and @currentJob.data.fromMarathonEvent.taskId is job.data.fromMarathonEvent.taskId)
-              @logger.debug("INFO", "Found missing job #{@currentJob.data.fromMarathonEvent.taskId} on modules worker")
-              alreadyInQueue = true
-            unless alreadyInQueue
-              moduleHasPreset = false
-              for preset in availablePresets
-                if preset.appId is job.data.fromMarathonEvent.appId then moduleHasPreset = true
-              unless moduleHasPreset
-                @logger.debug("INFO","Ignoring job #{job.data.fromMarathonEvent.appId}, preset not found for module #{@name}")
-              else
-                missing.push(job)
-            else
-              @logger.info "Job #{job.data.fromMarathonEvent.taskId} does not have to be cleaned up, since it already exists in current jobqueue"
-      for m in missing
-        @logger.info "\"" + m.data.fromMarathonEvent.taskId  + "\" is missing on inventory for module \"#{@name}\"", "Module.#{@name}"
-
-      wrong = []
-      for o in ownInventory
-        do (o) =>
-          found = false
-          for m in marathonInventory.tasks
-            if m.id is o.data.jobData.data.fromMarathonEvent.taskId then found = true
-          unless found
-            job = Job.load(o.data.jobData.data)
-            job.cleanup = true
-            alreadyInQueue = false
-            for task in @queue.tasks
-              if task.data.data.fromMarathonEvent.taskId is job.data.fromMarathonEvent.taskId
-                @logger.debug("INFO", "Found wrong job \"#{task.data.data.fromMarathonEvent.taskId}\"in queue")
-                alreadyInQueue = true
-            if (@currentJob and @currentJob.data.fromMarathonEvent.taskId is job.data.fromMarathonEvent.taskId)
-              @logger.debug("INFO", "Found wrong job \"#{@currentJob.data.fromMarathonEvent.taskId}\" on jobworker")
-              alreadyInQueue = true
-            unless alreadyInQueue
-              wrong.push(job)
-            else
-              @logger.info "Wrong job \"#{job.data.fromMarathonEvent.taskId}\" does not have to be cleaned up, since it already exists in current jobqueue"
-      for o in wrong
-        @logger.info "\"" + o.data.fromMarathonEvent.taskId  + "\" is wrong on inventory for module \"#{@name}\"", "Module.#{@name}"
-
+    .then (inventory) =>
+      moduleInventory = inventory
+      @getMissingTasks(marathonInventory, moduleInventory)
+    .then (missing) =>
+      missingTasks = missing
+      @getWrongTasks(marathonInventory, moduleInventory)
+    .then (wrong) ->
+      wrongTasks = wrong
       deferred.resolve(
-        wrong: wrong
-        missing: missing
+        wrong: wrongTasks
+        missing: missingTasks
       )
     .catch (error) ->
       logger.error("Error syncing \"" + error + error.stack + "\"")
@@ -201,27 +269,6 @@ class Module
       doneActions: @doneActions
       totalActions: @totalActions
     }
-
-  # create an empty zookeeperPath if it not exists
-  #
-  # @todo this should be moved to zookeeper class
-  # @param [String] path of the zookeeper node
-  #
-  createPathIfNotExist: (path) ->
-    deferred = Q.defer()
-    Module.zookeeperHandler().exists(path)
-    .then (exists) =>
-      if (exists)
-        return Q.resolve()
-      else
-        @logger.info("Create node \"#{path}\"")
-        return Module.zookeeperHandler().createNode(path,new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
-    .then ->
-      deferred.resolve()
-    .catch (error) ->
-      logger.error("Error checking if path exists \"" + error + "\"")
-      deferred.resolve()
-    deferred.promise
 
   # generates an relative path to use on the UI for this module
   #
@@ -298,6 +345,44 @@ class Module
     path = require("path")
     return path.join(process.env.MCONN_MODULE_PATH , @folder, "templates", templatename)
 
+  # send module's queue to client (browser)
+  #
+  WS_sendQueue: ->
+    @getWebsocketHandler()
+    .then (io) =>
+      currentQueue = []
+      MConnQueue = require("./JobQueue")
+      if @currentJob and
+      @currentJob.state isnt "finished" and
+      @currentJob.state isnt "failed" and
+      @currentJob.state isnt "nopreset" and
+      taskForWebview = MConnQueue.processTaskForWebview({task: @currentJob})
+        taskForWebview.runtime = MConnQueue.getRuntime(@currentJob)
+        currentQueue.push(taskForWebview)
+
+      for task in @queue.tasks
+        currentQueue.push(MConnQueue.processTaskForWebview({task: task.data}))
+      nsp = io.of("/" + @name)
+      if io then nsp.emit("update#{@name}Queue",
+        queue: currentQueue
+        queuelength: @queue.length()
+      )
+    .catch (error) =>
+      @logger.error("Error sending jobqueue to gui: " + error + error.stack)
+
+  updatePresetsOnGui: (socket) ->
+    unless socket
+      app = require("../App").app
+      io = app.get("io")
+      socket = io.of("/" + @name)
+    ModulePreset = require("./ModulePreset")
+    ModulePreset.getAllOfModule(@name)
+    .then (presets) ->
+      socket.emit("updatePresets", presets)
+    .catch (error) =>
+      @logger.error("Error fetching presets: " + error)
+      res.end()
+
   # init the module with everything it needs to work
   # this method should be extended like this
   # @example super(options).then -> YOUR STUFF
@@ -317,11 +402,15 @@ class Module
           active: @name # <- has to be set for gui functionality
           activeSubmenu: "main"
           config: JSON.stringify(@options)
-          mconnenv: req.mconnenv
           cache: cache
         )
       )
-
+    @getWebsocketHandler().then (io) =>
+      if io
+        nsp = io.of("/" + @name)
+        nsp.on("connection", (socket) =>
+          @updatePresetsOnGui(socket)
+        )
     # set route for queue
     if moduleRouter
       moduleRouter.get(@createModuleRoute("queue"), (req, res) =>
@@ -331,11 +420,9 @@ class Module
           filename: cache
           activeSubmenu: "queue"
           active: @name # <- has to be set for gui functionality
-          mconnenv: req.mconnenv
           cache: cache
         )
       )
-
     # set route for preset
     if moduleRouter
       moduleRouter.get(@createModuleRoute("presets"), (req, res) =>
@@ -346,56 +433,29 @@ class Module
           res.render(@getTemplatePath("presets"),
             modulename: @name
             filename: cache
-            activeSubmenu: "presets"
-            presets: presets
-            active: @name # <- has to be set for gui functionality
-            mconnenv: req.mconnenv
             cache: cache
           )
         .catch (error) =>
           @logger.error("Error fetching presets: " + error)
           res.end()
       )
-
-
-
     # send modules queue to gui
-    # emit an event every 1s
-
     setInterval =>
-      @getWebsocketHandler()
-      .then (io) =>
-        currentQueue = []
-        MConnQueue = require("./JobQueue")
-        if @currentJob and @currentJob.state isnt "finished" and @currentJob.state isnt "failed" and @currentJob.state isnt "nopreset"
-          taskForWebview = MConnQueue.processTaskForWebview({task: @currentJob})
-          if taskForWebview
-            taskForWebview.runtime = MConnQueue.getRuntime(@currentJob)
-            currentQueue.push(taskForWebview)
-
-        for task in @queue.tasks
-          currentQueue.push(MConnQueue.processTaskForWebview({task: task.data}))
-        nsp = io.of("/" + @name)
-        if io then nsp.emit("update#{@name}Queue",
-          queue: currentQueue
-          queuelength: @queue.length()
-        )
-      .catch (error) =>
-        @logger.error("Error sending jobqueue to gui: " + error + error.stack)
-    , 1000
+      @WS_sendQueue()
+    ,1000
 
     @options = options
     @timeout = if @timeout then @timeout
     else
       @logger.warn("No timeout defined for module \"#{@name}\", set to default value 5000ms")
       @timeout = 5000
-
+    ZookeeperHandler = require("./ZookeeperHandler")
     #generate required zookeeper paths, if they don't yet exist
-    @createPathIfNotExist("modules")
-    .then => @createPathIfNotExist("modules/" + @name)
-    .then => @createPathIfNotExist("modules/" + @name + "/presets") #all presets for marathon apps are stored here (filled by the ModulePreset)
-    .then => @createPathIfNotExist("modules/" + @name + "/jobqueue") #all jobs of the queue are registered here and removed if all modules are finished
-    .then => @createPathIfNotExist("modules/" + @name + "/inventory") #stores all states of the module like inventory or something else
+    ZookeeperHandler.createPathIfNotExist("modules")
+    .then => ZookeeperHandler.createPathIfNotExist("modules/" + @name)
+    .then => ZookeeperHandler.createPathIfNotExist("modules/" + @name + "/presets") #all presets for marathon apps are stored here (filled by the ModulePreset)
+    .then => ZookeeperHandler.createPathIfNotExist("modules/" + @name + "/jobqueue") #all jobs of the queue are registered here and removed if all modules are finished
+    .then => ZookeeperHandler.createPathIfNotExist("modules/" + @name + "/inventory") #stores all states of the module like inventory or something else
     .then ->
       deferred.resolve()
     .catch (error) =>
@@ -490,6 +550,13 @@ class Module
         console.log(error)
     deferred.promise
 
+  # finish job
+  #
+  # @param [String] state
+  # @param [Job] job
+  # @param [Function] callback worker callback
+  # @param [String] reason optional reason if job has failed
+  #
   finishJob: (state, job, callback, reason = false) ->
     unless job.state is "finished" or job.state is "failed" or job.state is "nopreset" #prevent from recalling if state is already finished
       @logger.debug("INFO", "Set job \"#{job.data.fromMarathonEvent.taskId}_#{job.data.fromMarathonEvent.taskStatus}\" to state \"#{state}\"")
@@ -504,10 +571,10 @@ class Module
           message = "Job \"#{job.data.fromMarathonEvent.taskId}_#{job.data.fromMarathonEvent.taskStatus}\" state changed to #{state}! Job Queue is now \"" + @queue.length() + "\""
           if reason then message += " Reason: #{reason}"
           logger.info("Job \"#{job.data.fromMarathonEvent.taskId}_#{job.data.fromMarathonEvent.taskStatus}\" state changed to #{state}! Job Queue is now \"" + @queue.length() +
-            "\"", "MconnModule.#{@name}")
+            "\"", "Module.#{@name}")
         .catch (error) =>
           logger.error("Could not change the job-state of \"#{job.data.fromMarathonEvent.taskId}_#{job.data.fromMarathonEvent.taskStatus}\" to #{state}",
-            "MconnModule.#{@name} \"" + error.toString() + "\"")
+            "Module.#{@name} \"" + error.toString() + "\"")
         .finally ->
           require("./JobQueue").WS_SendAllJobs()
           callback()
@@ -551,7 +618,7 @@ class Module
       @logger.info("Setting job \"#{job.data.fromMarathonEvent.taskId}_#{job.data.fromMarathonEvent.taskStatus}\" to state \"finished\"")
       job.state = "finished"
       job.stop = new Date().getTime()
-      logger.warn("Job allready done, skipping in queue! Job Queue is now \"" + @queue.length() + "\"", "MconnModule.#{@name}")
+      logger.warn("Job allready done, skipping in queue! Job Queue is now \"" + @queue.length() + "\"", "Module.#{@name}")
       require("./JobQueue").WS_SendAllJobs()
       #@currentJob = null
       callback()
@@ -597,6 +664,16 @@ class Module
     )
     deferred.promise
 
+  @appendModuleJavascripts: (modulename, folder) ->
+    path = require("path")
+    config = require("../webserver/config/config")
+    javascriptsFolder = path.join(process.env.MCONN_MODULE_PATH , folder, "templates", "public")
+    files = fs.readdirSync( javascriptsFolder )
+    for f in files
+      parts = f.split(".")
+      if parts.length > 1 and parts[parts.length - 1] is "js"
+        config.extraJavascriptFiles.push(modulename + "/" + f)
+
   # installs node modules from npm package.json dependencies for a module
   #
   # @param [String] modulename
@@ -639,6 +716,7 @@ class Module
                 .then ->
                   Module.compileCoffeescript(moduleNameInPackageJson, folder)
                 .then ->
+                  Module.appendModuleJavascripts(moduleNameInPackageJson, folder)
                   #add statics to load css/js file in frontend
                   expressStatics[moduleNameInPackageJson] = path.join(process.env.MCONN_MODULE_PATH, folder, "templates", "public")
                   Module = require(path.join(process.env.MCONN_MODULE_PATH , folder))
@@ -696,13 +774,4 @@ class Module
       logger.error "Error occured loading preset for app \"" + clearedAppId + "\" for module \"" + moduleName + "\" \"" +  error + "\""
       deferred.resolve(false)
     return deferred.promise
-
-  # handle errors with modules
-  #
-  # @todo: this seems to be unused now, needs a check
-  #
-  @moduleErrorHandler: (error) ->
-    logger.debug("INFO", "\"" + moduleName + "\"")
-    logger.error(error)
-
 module.exports = Module

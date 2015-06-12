@@ -15,12 +15,8 @@ html(ng-app="app")
         include includes/about
         .hidden.master-url(data-masterurl="#{mconnenv.masterdata.serverdata.serverurl}")
         .hidden.modulename(data-modulename="#{modulename}")
-        div.container
-            block content
-            if error
-                h1= message
-                h2= error.status
-                pre #{error.stack}
+        div.container(ng-view)
+
         script(src='#{mconnenv.masterdata.serverdata.serverurl}/socket.io/socket.io.js')
         each file in jsfiles
             script(src='/#{file}')

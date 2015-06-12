@@ -2,7 +2,6 @@
     "coffeescript_error": {
         "level": "error"
     },
-
     "arrow_spacing": {
         "name": "arrow_spacing",
         "level": "warn"

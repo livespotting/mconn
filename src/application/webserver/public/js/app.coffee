@@ -9,30 +9,44 @@
 # @author Jan Stabenow [j.stabenow@livespottingmedia.com]
 #
 
-this.app = angular.module('app', [])
+this.app = angular.module('app', ['ngRoute'])
 
-this.app.factory 'ws', [
-  '$rootScope'
-  ($rootScope) ->
-    socket = io.connect($(".master-url").data("masterurl") + "/" + $(".modulename").data("modulename"))
-    {
-    emit: (event, data, callback) ->
-      socket.emit event, data, ->
-        args = arguments
-        $rootScope.$apply ->
-          if callback
-            callback.apply null, args
-    on: (event, callback) ->
-      socket.on event, ->
-        args = arguments
-        $rootScope.$apply ->
+this.connectToNamespace = (namespace, $rootScope) ->
+  console.info ("connect to namespace #{namespace}")
+  if $rootScope.socket then $rootScope.socket.disconnect()
+  $rootScope.socket = io.connect($(".master-url").data("masterurl") + "/" + namespace, {'forceNew': true})
+  {
+  emit: (event, data, callback) ->
+    $rootScope.socket .emit event, data, ->
+      args = arguments
+      $rootScope.$apply ->
+        if callback
           callback.apply null, args
-    once: (event, callback) ->
-        socket.once event, ->
-            args = arguments
-            $rootScope.$apply ->
-                callback.apply null, args
-    off: (event, callback) ->
-      socket.removeListener event, callback
-    }
+  on: (event, callback) ->
+    $rootScope.socket .on event, ->
+      args = arguments
+      $rootScope.$apply ->
+        callback.apply null, args
+  once: (event, callback) ->
+    $rootScope.socket .once event, ->
+      args = arguments
+      $rootScope.$apply ->
+        callback.apply null, args
+  off: (event, callback) ->
+    $rootScope.socket .removeListener event, callback
+  }
+  $rootScope.socket.on 'allJobs', (jobs) ->
+    $rootScope.$apply ->
+      $rootScope.numberOfJobs = jobs.length
+  return $rootScope.socket
+
+this.app.config [
+  '$routeProvider',
+  ($routeProvider) ->
+    $routeProvider.when('/jobqueue',
+      templateUrl: 'jobqueue'
+      controller: 'jobsController')
+    .when('/',
+      redirectTo: '/jobqueue'
+    )
 ]

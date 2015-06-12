@@ -18,11 +18,15 @@ files = _.extend(
   require('./env/' + process.env.NODE_ENV) || {}
 )
 
-module.exports.getJavascriptFiles = ->
+module.exports.extraJavascriptFiles = []
+
+module.exports.getJavascriptFiles = =>
   js = []
   for file in files.assets.lib.js
     js.push(file)
   for file in files.assets.js
+    js.push(file)
+  for file in @extraJavascriptFiles
     js.push(file)
   return js
 

@@ -10,43 +10,49 @@
 #
 
 this.app.controller 'jobsController', [
-  'ws'
   '$scope'
-  (ws, $scope) ->
-    #angular.element(document).ready ->
+  '$rootScope'
+  ($scope, $rootScope) ->
+    $rootScope.socket = window.connectToNamespace("home", $rootScope)
     $scope.numberOfJobs = 0
     'use strict'
-    ws.on 'connect', ->
-      ws.emit 'getJobs', initial: true
-      ws.on 'gotMConnEnv', (mconnenv) ->
-          $scope.mconnenv = mconnenv
-          console.log mconnenv
-      ws.on 'allJobs', (jobs) ->
-        $scope.jobs = jobs
-        totalJobsCount = if jobs.length then jobs.length else 0 # +1 for active element
-        $scope.numberOfJobs = totalJobsCount
-      ws.on 'updateJobTime', (time) ->
+    $rootScope.socket.on 'connect', ->
+      $rootScope.socket.emit 'getJobs', initial: true
+      $rootScope.socket.on 'gotMConnEnv', (mconnenv) ->
+        console.log mconnenv
+      $rootScope.socket.on 'allJobs', (jobs) ->
+        $scope.$apply ->
+          $scope.jobs = jobs
+          totalJobsCount = if jobs.length then jobs.length else 0 # +1 for active element
+          $rootScope.numberOfJobs = totalJobsCount
+          console.log $rootScope.numberOfJobs
+      $rootScope.socket.on 'updateJobTime', (time) ->
         $scope.jobtime = time
-      ws.on 'removeActiveJob', (jobData) ->
+      $rootScope.socket.on 'removeActiveJob', (jobData) ->
         $scope.activeJob = null
-    resetOld = ->
-      $("#logging").hide() #hide logging overlay
-      $(".navbar-nav li").removeClass("active")
-    $scope.showQueue = ->
-      resetOld()
-      $(".navbar-nav li.queue").addClass("active")
-    $scope.showLog = ->
-      resetOld()
-      $(".navbar-nav li.log").addClass("active")
-      $("#logging").show()
       return
 ]
 
-this.app.controller 'logsController', [
-  'ws'
-  '$scope'
-  (ws, $scope) ->
-    'use strict'
-    ws.on 'connect', ->
-      ws.emit "getLog"
-]
+this.app.controller 'NavCtrl', ($scope, $location) ->
+  $scope.isActive = (viewLocation) ->
+    return viewLocation is $location.path()
+
+  $scope.isActiveMainMenu = (viewLocation) ->
+    partsVL = viewLocation.split("/")
+    partsL = $location.path().split("/")
+    if partsVL.length >= 3 # like /modules/HelloWorld
+      return "/" + partsVL[1] + "/" + partsVL[2] is "/" + partsL[1] + "/" + partsL[2]
+    else if partsVL.length >= 2
+      return "/" + partsVL[1]  is "/" + partsL[1]
+
+  $scope.classActive = (viewLocation) ->
+    if( $scope.isActive(viewLocation) )
+      return 'active'
+    else
+      return ''
+
+  $scope.classActiveMainMenu = (viewLocation) ->
+    if( $scope.isActiveMainMenu(viewLocation) )
+      return 'active'
+    else
+      return ''

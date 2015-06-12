@@ -15,6 +15,7 @@ Q = require("q")
 logger = require("./Logger")("Job")
 
 # Holder for all data that comes from marathon request
+# @todo: RENAME CLASS TO EventData
 class Job
 
   # holds data from marathon
@@ -47,7 +48,7 @@ class Job
   # @param [Object] item marathon inventory item
   # @return [Job] new instance of Job
   #
-  @createFromMarathonInventory: (item) ->
+  @createFromMarathonInventory: (item, cleanupTask) ->
     job = new Job
     job.data =
       fromMarathonEvent:
@@ -58,6 +59,7 @@ class Job
         ports: item.ports
         eventType: null
         timestamp: item.startedAt
+    if cleanupTask then job.cleanup = true
     return job
 
   # create a new instance of MconnJob with data
@@ -65,9 +67,10 @@ class Job
   # @param [Object] data MconnJob-Data
   # @return [Job] new instance of Job
   #
-  @load: (data) ->
+  @load: (data, cleanupTask) ->
     job = new Job()
     job.data = data
+    if cleanupTask then job.cleanup = true
     return job
 
   # create a copy of this Job

@@ -126,6 +126,7 @@ class ModulePreset
                 new Buffer(JSON.stringify(preset)), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
           promise
           .then ->
+            Module.modules[preset.moduleName].updatePresetsOnGui()
             count++
           .catch (error) ->
             logger.error(error)

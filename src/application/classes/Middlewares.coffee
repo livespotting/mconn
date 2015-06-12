@@ -36,28 +36,13 @@ class Middlewares
     logger.debug("INFO", "Fetching data from leading master")
     Middlewares.ZookeeperHandler().getMasterData().then (masterdata) ->
       activatedModules = require("./Module").modules
-
-      req.mconnenv =
+      res.locals.mconnenv =
         masterdata: masterdata
         activatedModules: activatedModules
         version: process.env.npm_package_version
-        hostname: process.env.HOSTNAME
-        host: process.env.MCONN_HOST
-        port: process.env.MCONN_PORT
-        root_path: process.env.MCONN_PATH
-        debug: process.env.MCONN_DEBUG
-        jobqueue_timeout: process.env.MCONN_JOBQUEUE_TIMEOUT
-        jobqueue_sync_time: process.env.MCONN_JOBQUEUE_SYNC_TIME
-        module_path: process.env.MCONN_MODULE_PATH
-        module_start: process.env.MCONN_MODULE_START
-        module_prepare: process.env.MCONN_MODULE_PREPARE
-        marathon_hosts: process.env.MCONN_MARATHON_HOSTS
-        marathon_ssl: process.env.MCONN_MARATHON_SSL
-        zk_hosts: process.env.MCONN_ZK_HOSTS
-        zk_path: process.env.MCONN_ZK_PATH
-        zk_session_timeout: process.env.MCONN_ZK_SESSION_TIMEOUT
-        zk_spin_delay: process.env.MCONN_ZK_SPIN_DELAY
-        zk_retries: process.env.MCONN_ZK_RETRIES
+      vars = require("../App").env_vars
+      for e in vars
+        res.locals.mconnenv[e.name] = process.env[e.name]
       next()
 
   # middleware to append masterdetection to request object
@@ -81,12 +66,12 @@ class Middlewares
   # @param [Function] next callback-method
   #
   @route: (req, res, next) ->
-    logger.debug("INFO", "Proxying request to leader " + req.mconnenv.masterdata.serverdata.serverurl + "/v1/jobqueue")
-    unless req.isMaster
+    unless Middlewares.ZookeeperHandler().isMaster
+      logger.info( "Proxying request to leader " + res.locals.mconnenv.masterdata.serverdata.serverurl + req.originalUrl)
       request = require("request")
       options =
-        uri: req.mconnenv.masterdata.serverdata.serverurl + "/v1/jobqueue"
-        method: "POST"
+        uri: res.locals.mconnenv.masterdata.serverdata.serverurl + req.originalUrl
+        method: req.method
         json: req.body
       request options, (err, response, body) ->
         if err
@@ -105,7 +90,7 @@ class Middlewares
   #
   @checkRequestIsValid: (req, res, next) ->
     logger.debug("INFO", "Validate the incoming job")
-    if req?.body?.eventType? and req.body.eventType is "status_update_event"
+    if req?.body?.eventType? and req.body.eventType is "status_update_event" or req.body.eventType is "scheduler_registered_event"
       next()
     else
       res.send(
@@ -113,6 +98,24 @@ class Middlewares
         message: "ok, not 'status_udate_event'")
       res.end()
       logger.info("Ignoring eventType \"" + req.body.eventType + "\"")
+
+  @expressLogger: (req, res, next) ->
+    bytes = require('bytes')
+    req._startTime = new Date
+    log = ->
+      code = res.statusCode
+      len = parseInt(res.getHeader('Content-Length'), 10)
+      if isNaN(len) then len = '' else len = ' - ' + bytes(len)
+      duration = (new Date - req._startTime)
+      url = (req.originalUrl || req.url)
+      method = req.method
+      if len isnt ''
+        logger.info("#{method} \"#{url}\" #{code} #{duration}ms")
+      else
+        logger.info("#{method} \"#{url}\" #{code} #{duration}ms")
+    res.on "finish", log
+    res.on "close", log
+    next()
 
   # middleware push the request as Job to JobQueues
   #
@@ -122,14 +125,26 @@ class Middlewares
   #
   @sendRequestToQueue: (req, res, next) ->
     logger.debug("INFO", "Processing job to \"JobQueue\"")
-    JobQueue = require("./JobQueue")
-    mconnjob = new Job(req, res)
-    JobQueue.add(mconnjob)
-    res.send(
-      status: "ok"
-      message: "ok from " + req.mconnenv.masterdata.serverdata.serverurl
-      orderId: mconnjob.data.orderId
-    )
-    res.end()
+
+    #sync if leader changed on marathon
+    if (req.body.eventType is "scheduler_registered_event")
+      logger.info("LEADER CHANGE ON MARATHON: sync all modules!")
+      modules = require("./Module").modules
+      for modulename, module of modules
+        do (module) ->
+          logger.info("Syncing #{module.name}")
+          module.doSync()
+      res.end()
+    # else it has to be hte "status_update_event", so move on
+    else
+      JobQueue = require("./JobQueue")
+      mconnjob = new Job(req, res)
+      JobQueue.add(mconnjob)
+      res.send(
+        status: "ok"
+        message: "ok from " + res.locals.mconnenv.masterdata.serverdata.serverurl
+        orderId: mconnjob.data.orderId
+      )
+      res.end()
 
 module.exports = Middlewares

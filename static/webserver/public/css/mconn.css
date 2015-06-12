@@ -183,7 +183,7 @@ dt {
     border: #00caa0;
     border-width: 1px;
 }
-
+/* ng-cloak */
 [ng\:cloak],
 [ng-cloak],
 [data-ng-cloak],

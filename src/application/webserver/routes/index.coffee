@@ -11,18 +11,22 @@
 
 express = require("express")
 fs = require("fs")
-logger = require("../../classes/Logger")("MConn.indexRouter")
 Q = require("q")
 router = express.Router()
 
+logger = require("../../classes/Logger")("IndexRouter")
 
 # Web UI Routes
 #
 
 # GET / -> /jobqueue
 router.get "/", (req, res) ->
-  modules = require("../../classes/Module").modules
-  res.redirect('/jobqueue')
+  if req.params.flush then cache = false else cache = "jobqueue"
+  res.render("layout",
+    filename: cache
+    modulename: "home"
+    cache: cache
+  )
   res.end()
 
 # GET /jobqueue ui
@@ -31,7 +35,6 @@ router.get "/jobqueue", (req, res) ->
   res.render("jobqueue",
     filename: cache
     modulename: "home"
-    mconnenv: req.mconnenv
     cache: cache
   )
   res.end()
@@ -44,6 +47,43 @@ router.get "/v1/jobqueue", (req, res) ->
   JobQueue = require("../../classes/JobQueue")
   res.json(JobQueue.createJobDataForWebview())
   res.end()
+
+# GET /v1/info - show leader + enviroments
+router.get "/v1/info", (req, res) ->
+  env = {}
+  vars = require("../../App").env_vars
+  for e in vars
+    env[e.name] = process.env[e.name]
+  res.json(
+    leader: res.locals.mconnenv.masterdata.serverdata.ip + ":" + res.locals.mconnenv.masterdata.serverdata.port
+    env: env
+  )
+  res.end()
+
+# GET /v1/leader - show leaders host:port
+router.get "/v1/leader", (req, res) ->
+  res.json(
+    leader: res.locals.mconnenv.masterdata.serverdata.ip + ":" + res.locals.mconnenv.masterdata.serverdata.port
+  )
+  res.end()
+
+# GET /v1/ping - for healthchecks
+router.get "/v1/ping", (req, res) ->
+  res.send("pong")
+  res.end()
+
+# POST /v1/exit/leader -> Kill the leading master
+router.post "/v1/exit/leader", (req, res) ->
+  ZookeeperHandler = require("../../classes/ZookeeperHandler")
+  ZookeeperHandler.getMasterData().then (masterdata) ->
+    request = require("request")
+    request.post(masterdata.serverdata.serverurl + "/v1/exit/node")
+    res.end()
+
+# POST /v1/exit/node -> Kill the requested instance
+router.post "/v1/exit/node", (req, res) ->
+  res.end()
+  process.exit()
 
 # GET /v1/module/list - list all modules and her settings
 router.get "/v1/module/list", (req, res) ->
@@ -120,6 +160,28 @@ router.post "/v1/module/preset", (req, res) ->
     res.statusCode = 500
     res.end()
 
+# POST /v1/module.sync - for forcing sync
+router.post "/v1/module/sync/:modulename?", (req, res) ->
+  modules = require("../../classes/Module").modules
+  if req.params.modulename
+    logger.info("force sync: sync #{req.params.modulename}!")
+    if modules[req.params.modulename]?
+      logger.info("Syncing #{modules[req.params.modulename].name}")
+      modules[req.params.modulename].doSync()
+      res.send("ok")
+    else
+      res.json(
+        error: "Module " + req.params.modulename + " unkown or not active"
+      )
+    res.end()
+  else
+    logger.info("force sync: sync all modules!")
+    for modulename, module of modules
+      do (module) ->
+        logger.info("Syncing #{module.name}")
+        module.doSync()
+    res.end()
+
 # PUT /v1/module/preset - update a preset of a module
 router.put "/v1/module/preset", (req, res) ->
   ModulePreset = require("../../classes/ModulePreset")
@@ -148,44 +210,6 @@ router.delete "/v1/module/preset", (req, res) ->
     logger.error("DELETE on /preset: " + error, "router.delete /preset")
   .finally ->
     res.end()
-
-# GET /v1/info - show leader + enviroments
-router.get "/v1/info", (req, res) ->
-  env = {}
-  vars = require("../../App").env_vars
-  for e in vars
-    env[e.name] = process.env[e.name]
-  res.json(
-    leader: req.mconnenv.masterdata.serverdata.ip + ":" + req.mconnenv.masterdata.serverdata.port
-    env: env
-  )
-  res.end()
-
-# GET /v1/leader - show leaders host:port
-router.get "/v1/leader", (req, res) ->
-  res.json(
-    leader: req.mconnenv.masterdata.serverdata.ip + ":" + req.mconnenv.masterdata.serverdata.port
-  )
-  res.end()
-
-# GET /v1/ping - for healthchecks
-router.get "/v1/ping", (req, res) ->
-  res.send("pong")
-  res.end()
-
-# POST /v1/exit/leader -> Kill the leading master
-router.post "/v1/exit/leader", (req, res) ->
-  ZookeeperHandler = require("../../classes/ZookeeperHandler")
-  ZookeeperHandler.getMasterData().then (masterdata) ->
-    request = require("request")
-    request.post(masterdata.serverdata.serverurl + "/v1/exit/node")
-    res.end()
-
-# POST /v1/exit/node -> Kill the requested instance
-router.post "/v1/exit/node", (req, res) ->
-  res.end()
-  process.exit()
-
 
 #  TEMP FOR DEVELOPMENT
 #

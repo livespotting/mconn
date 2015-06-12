@@ -13,12 +13,13 @@ module.exports =
   assets:
     lib:
       css: [
-        'lib/bootstrap-3.3.4-dist/css/bootstrap.min.css'
+        'lib/bootstrap/dist/css/bootstrap.min.css'
       ]
       js: [
-        'lib/jquery/jquery-2.1.4.min.js'
-        'lib/bootstrap-3.3.4-dist/js/bootstrap.min.js'
+        'lib/jquery/dist/jquery.min.js'
+        'lib/bootstrap/dist/js/bootstrap.min.js'
         'lib/angular/angular.min.js'
+        'lib/angular-route/angular-route.min.js'
       ]
     css: [ 'dist/application.min.css' ]
     js: [ 'dist/application.min.js']

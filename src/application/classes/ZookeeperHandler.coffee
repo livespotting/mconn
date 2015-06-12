@@ -53,6 +53,26 @@ class ZookeeperHandler
     deferred.resolve()
     return deferred.promise
 
+  # create an empty zookeeperPath if it not exists
+  #
+  # @param [String] path of the zookeeper node
+  #
+  @createPathIfNotExist: (path) ->
+    deferred = Q.defer()
+    @exists(path)
+    .then (exists) =>
+      if (exists)
+        return Q.resolve()
+      else
+        logger.info("Create node \"#{path}\"")
+        return @createNode(path,new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
+    .then ->
+      deferred.resolve()
+    .catch (error) ->
+      logger.error("Error checking if path exists \"" + error + "\"")
+      deferred.resolve()
+    deferred.promise
+
   # get masterdata from zookeeper
   #
   # @return [Promise] resolves with masterdata
@@ -135,23 +155,15 @@ class ZookeeperHandler
     return deferred.promise
 
   # create base structure
-  # @todo this should check for every node, if it exists, atm it stops creating base structure, if the first node exists
+  #
   # @return [Promise]
   #
   @createBaseStructure: ->
     logger.debug("INFO", "Create basestructure if required")
-    self = @
     deferred = Q.defer()
-    self.createNode("leader",new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
-    .then ->
-      logger.info "Node \"/leader\" successfully created"
-      self.createNode("jobqueue",new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
-    .then ->
-      logger.info "Node \"/jobqueue\" successfully created"
-      self.createNode("inventory",new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
-    .then ->
-      logger.info "Node \"/inventory\" successfully created"
-      self.createNode("modules",new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
+    @createPathIfNotExist("leader")
+    .then => @createPathIfNotExist("inventory")
+    .then => @createPathIfNotExist("jobqueue")
     .catch (error) ->
       logger.info(error)
     .finally ->
@@ -320,7 +332,6 @@ class ZookeeperHandler
   @authenticationFailedHandler: ->
     logger.error("Zookeeper-Session authentication failed, application stop, please fix and restart...")
 
-
   # handler if read only connection to zookeeper is established
   #
   @connectedReadOnlyHandler: ->
@@ -332,9 +343,7 @@ class ZookeeperHandler
     logger.error("Zookeeper-Session has expired, closing application")
     process.exit()
 
-
   # method to execute on connection
-  # todo: move namespace and base structure generation to master actions
   #
   @connectedHandler: =>
     logger.debug("INFO", "Initiate watcher on node \"/leader\"")
@@ -370,15 +379,14 @@ class ZookeeperHandler
     @client.on "connected", @connectedHandler
     @client.on "disconnected", @disconnectedHandler
 
-    #own events
+    # own events
     @client.on "member_registered", ->
       App = require("../App")
       App.initModules()
       .then ->
         App.startWebserver()
 
-
-  # create a new node on zookeeper under /server as ephemeral to register this container as running origin server
+  # create a new node on zookeeper under /leader as ephemeral to register this container as running origin server
   #
   # @return [Promise]
   #
@@ -407,7 +415,7 @@ class ZookeeperHandler
         deferred.resolve()
     deferred.promise
 
-  # watch /server node for changes and add event, if change detected
+  # watch /leader node for changes and add event, if change detected
   #
   @watchLeader: ->
     logger.debug("INFO", "Detect changes on node \"/leader\"")

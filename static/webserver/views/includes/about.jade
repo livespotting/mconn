@@ -12,48 +12,48 @@
               dd #{mconnenv.version}
             dl.dl-horizontal.dl-horizontal-lg
               dt App ID
-              dd #{mconnenv.zk_path}
+              dd #{mconnenv.MCONN_ZK_PATH}
               dt Leader
               dd #{mconnenv.masterdata.serverdata.ip + ":" + mconnenv.masterdata.serverdata.port}
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Hostname
-              dd #{mconnenv.hostname}
+              dd #{mconnenv.MCONN_HOST}
               dt Path
-              dd #{mconnenv.root_path}
+              dd #{mconnenv.MCONN_PATH}
               dt Debug Modus
-              dd #{mconnenv.debug}
+              dd #{mconnenv.MCONN_DEBUG}
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Job Queue Timeout
-              dd #{mconnenv.jobqueue_timeout}
+              dd #{mconnenv.MCONN_JOBQUEUE_TIMEOUT}
               dt Job Queue Sync Time
-              dd #{mconnenv.jobqueue_sync_time}
+              dd #{mconnenv.MCONN_JOBQUEUE_SYNC_TIME}
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Module Path
-              dd #{mconnenv.module_path}
+              dd #{mconnenv.MCONN_MODULE_PATH}
               dt Module Prepare
-              dd #{mconnenv.module_prepare}
+              dd #{mconnenv.MCONN_MODULE_PREPARE}
               dt Module Start
-              dd #{mconnenv.module_start}
+              dd #{mconnenv.MCONN_MODULE_START}
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Marathon Hosts
-              dd #{mconnenv.marathon_hosts}
+              dd #{mconnenv.MCONN_MARATHON_HOSTS}
               dt Marathon SSL
-              dd #{mconnenv.marathon_ssl}
+              dd #{mconnenv.MCONN_MARATHON_SSL}
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Zk
               dd zk://#{mconnenv.zk_hosts}#{mconnenv.zk_path}
               dt Zk Hosts
-              dd #{mconnenv.zk_hosts}
+              dd #{mconnenv.MCONN_ZK_HOSTS}
               dt Zk Path
-              dd #{mconnenv.zk_path}
+              dd #{mconnenv.MCONN_ZK_PATH}
               dt Zk Session Timeout
-              dd #{mconnenv.zk_session_timeout}
+              dd #{mconnenv.MCONN_ZK_SESSION_TIMEOUT}
               dt Zk Spin Delay
-              dd #{mconnenv.zk_spin_delay}
+              dd #{mconnenv.MCONN_ZK_SPIN_DELAY}
               dt Zk Connection Retries
-              dd #{mconnenv.zk_retries}
+              dd #{mconnenv.MCONN_ZK_RETRIES}

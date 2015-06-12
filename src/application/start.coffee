@@ -11,6 +11,7 @@
 
 App = require("./App")
 require("./webserver/config/config")
+
 JobQueue = require("./classes/JobQueue")
 
 App.checkEnvironment().then ->
