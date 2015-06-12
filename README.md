@@ -20,7 +20,7 @@ One of our targets has been a framework design that provides numerous custom pos
 * [JSON/Web API](docs/webapi.md)
 * JobQueue 
  * API to react on incoming task events
- * Inventory sync. (timeeven, mconn-leader-election, marathon leader-election or by apicall) to work fault-tolerance
+ * Inventory sync. (timeeven, MConn leader election, Marathon leader election or by apicall) to work fault-tolerance
 * Module-Management
 * HA
  * *Zookeeper as datastore for states and module presets*
