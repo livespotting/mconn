@@ -1,5 +1,8 @@
 language: node_js
 before_script:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y zookeeper
+  - sudo /usr/share/zookeeper/bin/zkServer.sh start
   - npm install -g coffee-script coffeelint grunt-cli bower mocha chai
 node_js:
   - "0.12"
