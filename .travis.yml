@@ -8,5 +8,6 @@ node_js:
   - "0.12"
 script: 
   - sudo /usr/share/zookeeper/bin/zkServer.sh start
+  - export MCONN_ZK_HOSTS=localhost:2181
+  - grunt test-cli
   - sudo /usr/share/zookeeper/bin/zkCli.sh ls /
-  - grunt build
