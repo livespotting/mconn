@@ -6,4 +6,7 @@ before_script:
   - bower install --allow-root
 node_js:
   - "0.12"
-script: sudo /usr/share/zookeeper/bin/zkServer.sh start && env && grunt test-cli
+script: 
+  - sudo /usr/share/zookeeper/bin/zkServer.sh start
+  - sudo /usr/share/zookeeper/bin/zkCli.sh ls /
+  - grunt build
