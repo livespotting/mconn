@@ -6,4 +6,4 @@ before_script:
   - npm install -g coffee-script coffeelint grunt-cli bower mocha chai
 node_js:
   - "0.12"
-script: bower install --allow-root && grunt test-cli
+script: npm install && bower install --allow-root && export MCONN_TEST_SHOW_APP_LOGS=true && export NODE_ENV=development && grunt test-cli
