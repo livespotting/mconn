@@ -66,9 +66,9 @@ class Logger
   #
   warn: (message, context = @context) ->
     if process.env.NODE_ENV is "development"
-      @logMessage(message, context, "WARN", false)
-    else
       @logMessage(message, context, "WARN", "red")
+    else
+      @logMessage(message, context, "WARN", false)
 
   # log error
   #
@@ -77,9 +77,9 @@ class Logger
   #
   error: (message, context = @context) ->
     if process.env.NODE_ENV is "development"
-      @logMessage(message, context, "ERROR", false)
-    else
       @logMessage(message, context, "ERROR", "red")
+    else
+      @logMessage(message, context, "ERROR", false)
 
   # log debug
   #

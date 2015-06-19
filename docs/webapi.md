@@ -3,9 +3,9 @@
 **Notice:**  
 This is a pre-release! We can't guarantee that something you build today will work in the next release.
 
-* [JobQueue](#jobqueue)
- * [GET /v1/jobqueue](#get-v1jobqueue)
- * [POST /v1/jobqueue](#post-v1jobqueue)
+* [Queue](#queue)
+ * [GET /v1/queue](#get-v1queue)
+ * [POST /v1/queue](#post-v1queue)
 * [Modules](#modules)
  * [GET /v1/module/list](#get-v1modulelist)
  * [GET /v1/module/list/{moduleId}](#get-v1modulelistmoduleid)
@@ -25,13 +25,13 @@ This is a pre-release! We can't guarantee that something you build today will wo
  * [POST /v1/exit/leader](#post-v1exitleader)
  * [POST /v1/exit/node](#post-v1exitnode)
 
-## JobQueue
+## Queue
 
-### GET /v1/jobqueue
+### GET /v1/queue
 
 Request:
 ```sh
-GET /v1/jobqueue HTTP/1.1
+GET /v1/queue HTTP/1.1
 Accept: */*
 ```
 
@@ -39,10 +39,8 @@ Response:
 ```json
 [
     {
-        "runtime": 0.8,
-        "taskId": "bridged-webapp.715a2ddb-02f0-11e5-835c-a268d739d527",
-        "appId": "/bridged-webapp",
-        "marathonData": {
+        "id": "bridged-webapp.715a2ddb-02f0-11e5-835c-a268d739d527_TASK_RUNNING",
+        "data": {
             "taskId": "bridged-webapp.715a2ddb-02f0-11e5-835c-a268d739d527",
             "taskStatus": "TASK_RUNNING",
             "appId": "/bridged-webapp",
@@ -54,24 +52,24 @@ Response:
             "eventType": "status_update_event",
             "timestamp": "2015-05-25T15:12:23.338Z"
         },
-        "state": "waiting for all modules to complete",
-        "states": [
+        "moduleState": [
             {
-                "modulename": "HelloWorld",
+                "name": "HelloWorld",
                 "state": "started",
-                "runtime": 0.8
+                "runtime": 0
             }
         ],
-        "current": true
+        "runtime": 0.8,
+        "active": true
     }
 ]
 ```
 
-### POST /v1/jobqueue
+### POST /v1/queue
 
 Request:
 ```sh
-POST /v1/jobqueue HTTP/1.1
+POST /v1/queue HTTP/1.1
 Accept: application/json
 Content-Type: application/json; charset=utf-8
 
@@ -391,12 +389,11 @@ Response:
         "MCONN_HOST": "slave1.dev",
         "MCONN_PORT": "31999",
         "MCONN_PATH": "/application",
-        "MCONN_DEBUG": "false",
-        "MCONN_JOBQUEUE_TIMEOUT": "60000",
-        "MCONN_JOBQUEUE_SYNC_TIME": "600000",
+        "MCONN_QUEUE_TIMEOUT": "10000",
         "MCONN_MODULE_PATH": "/mnt/mesos/sandbox",
-        "MCONN_MODULE_START": "mconn-helloworld-master",
         "MCONN_MODULE_PREPARE": "true",
+        "MCONN_MODULE_START": "mconn-helloworld-master",
+        "MCONN_MODULE_SYNC_TIME": "600000",
         "MCONN_ZK_HOSTS": "leader.mesos:2181",
         "MCONN_ZK_PATH": "/mconn",
         "MCONN_ZK_SESSION_TIMEOUT": "1000",

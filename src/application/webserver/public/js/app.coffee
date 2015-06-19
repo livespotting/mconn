@@ -35,18 +35,18 @@ this.connectToNamespace = (namespace, $rootScope) ->
   off: (event, callback) ->
     $rootScope.socket .removeListener event, callback
   }
-  $rootScope.socket.on 'allJobs', (jobs) ->
+  $rootScope.socket.on 'allTasks', (tasks) ->
     $rootScope.$apply ->
-      $rootScope.numberOfJobs = jobs.length
+      $rootScope.numberOfTasks = tasks.length
   return $rootScope.socket
 
 this.app.config [
   '$routeProvider',
   ($routeProvider) ->
-    $routeProvider.when('/jobqueue',
-      templateUrl: 'jobqueue'
-      controller: 'jobsController')
+    $routeProvider.when('/queue',
+      templateUrl: 'queue'
+      controller: 'tasksController')
     .when('/',
-      redirectTo: '/jobqueue'
+      redirectTo: '/queue'
     )
 ]

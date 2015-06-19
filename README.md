@@ -8,7 +8,7 @@ This is a pre-release for friends and colleagues to check code styles, functions
 
 --
 
-MConn is an in [Coffee-Script](http://coffeescript.org) written HA JobQueue combined with a module management to work as an event-subscriber behind Mesosphere's [Marathon](https://github.com/mesosphere/marathon) to react on incoming task events and realize simple post processes (for Service-Discovery-Solutions) based on up/down scalings.
+MConn is an in [Coffee-Script](http://coffeescript.org) written HA Queue combined with a module management to work as an event-subscriber behind Mesosphere's [Marathon](https://github.com/mesosphere/marathon) to react on incoming task events and realize simple post processes (for Service-Discovery-Solutions) based on up/down scalings.
 
 [![Workflows](docs/img/mconn_example.png)](https://github.com/livespotting/mconn)
 
@@ -18,7 +18,7 @@ One of our targets has been a framework design that provides numerous custom pos
 
 * Web UI
 * [JSON/Web API](docs/webapi.md)
-* JobQueue 
+* Queue 
  * API to react on incoming task events
  * Inventory sync. (timeeven, MConn leader election, Marathon leader election or by apicall) to work fault-tolerance
 * Module-Management
@@ -36,7 +36,7 @@ MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitat
 ##### Requirements:
 
 * [Mesos](http://mesos.apache.org) (tested with 0.22.1)
-* [Marathon](https://github.com/mesosphere/marathon) (tested with 0.8.1)
+* [Marathon](https://github.com/mesosphere/marathon) (tested with 0.8.2)
 * [Mesos-DNS](https://github.com/mesosphere/mesos-dns) (tested with 0.1.2)
 * [Docker](http://docker.com) (tested with 1.6.2)
 
@@ -78,7 +78,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "livespotting/mconn:0.0.7",
+            "image": "livespotting/mconn:0.0.8",
             "network": "HOST"
         },
         "volumes": []
@@ -126,7 +126,7 @@ After that call up the MConn UI at [mconn.marathon.mesos:31999](http://mconn.mar
 To expand the "event_subscriber" on Marathon, start Marathon with "--event_subscriber http_callback" (more [here](https://mesosphere.github.io/marathon/docs/command-line-flags.html)) and afterwards install MConn as a HTTP-Endpoint:
 
 ```sh
-curl -X POST leader.mesos:8080/v2/eventSubscriptions?callbackUrl=http://mconn.marathon.mesos:31999/jobqueue
+curl -X POST leader.mesos:8080/v2/eventSubscriptions?callbackUrl=http://mconn.marathon.mesos:31999/v1/queue
 ```
 ### 3. Start a Demo-Application:
 
@@ -139,7 +139,7 @@ The preset will generate a "Moin, Moin" if a task has got the status quo "TASK_R
 
 [![MConn UI DemoApp](docs/img/readme-ui-2.png)](https://github.com/datarhei/mconn)
 
-Afterwards start the Demo-App to see how the MConn-JobQueue-Management will work:
+Afterwards start the Demo-App to see how the MConn-Queue-Management will work:
 
 ```sh
 curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \

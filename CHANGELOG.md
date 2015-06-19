@@ -1,3 +1,30 @@
+### Changes from 0.0.7 to 0.0.8
+
+* re-engineered naming and code cleaned up:
+ * Job (Class) -> TaskData (Class)
+ * JobQueue (Class) -> QueueManager (Class)
+ * JobQueue -> Queue
+   * /v1/jobqueue -> /v1/queue
+ * currentJob -> activeTask
+ * etc.
+* implemented mocha and chai (first testings):
+ * LeaderElection (5 tests) 
+ * Middlewares (9 tests)
+ * Module (13 tests)
+ * TaskData (8 tests)
+ * WebAPI (33 tests)
+
+*Notice: 
+Please cleanup your ZK-Node like*
+```sh
+zkCli.sh rmr /mconn
+```
+*and update you Marathon-HTTPCallback to "../v1/queue" like*
+```sh
+curl -X DELETE leader.mesos:8080/v2/eventSubscriptions?callbackUrl=http://mconn.marathon.mesos:31999/v1/jobqueue
+curl -X POST leader.mesos:8080/v2/eventSubscriptions?callbackUrl=http://mconn.marathon.mesos:31999/v1/queue
+```
+
 ### Changes from 0.0.6 to 0.0.7
 
 * switched env MCONN_DEBUG to NODE_ENV

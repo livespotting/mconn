@@ -21,14 +21,12 @@
               dd #{mconnenv.MCONN_HOST}
               dt Path
               dd #{mconnenv.MCONN_PATH}
-              dt Debug Modus
-              dd #{mconnenv.MCONN_DEBUG}
             hr
             dl.dl-horizontal.dl-horizontal-lg
-              dt Job Queue Timeout
-              dd #{mconnenv.MCONN_JOBQUEUE_TIMEOUT}
-              dt Job Queue Sync Time
-              dd #{mconnenv.MCONN_JOBQUEUE_SYNC_TIME}
+              dt Queue Timeout
+              dd #{mconnenv.MCONN_QUEUE_TIMEOUT}
+              dt Inventory Sync Time
+              dd #{mconnenv.MCONN_INVENTORY_SYNC_TIME}
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Module Path
@@ -46,7 +44,7 @@
             hr
             dl.dl-horizontal.dl-horizontal-lg
               dt Zk
-              dd zk://#{mconnenv.zk_hosts}#{mconnenv.zk_path}
+              dd zk://#{mconnenv.MCONN_ZK_HOSTS}#{mconnenv.MCONN_ZK_PATH}
               dt Zk Hosts
               dd #{mconnenv.MCONN_ZK_HOSTS}
               dt Zk Path

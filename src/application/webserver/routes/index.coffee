@@ -11,17 +11,17 @@
 
 express = require("express")
 fs = require("fs")
-Q = require("q")
 router = express.Router()
+Q = require("q")
 
 logger = require("../../classes/Logger")("IndexRouter")
 
 # Web UI Routes
 #
 
-# GET / -> /jobqueue
+# GET /
 router.get "/", (req, res) ->
-  if req.params.flush then cache = false else cache = "jobqueue"
+  if req.params.flush then cache = false else cache = "home"
   res.render("layout",
     filename: cache
     modulename: "home"
@@ -29,10 +29,10 @@ router.get "/", (req, res) ->
   )
   res.end()
 
-# GET /jobqueue ui
-router.get "/jobqueue", (req, res) ->
-  if req.params.flush then cache = false else cache = "jobqueue"
-  res.render("jobqueue",
+# GET /queue
+router.get "/queue", (req, res) ->
+  if req.params.flush then cache = false else cache = "queue"
+  res.render("queue",
     filename: cache
     modulename: "home"
     cache: cache
@@ -42,10 +42,10 @@ router.get "/jobqueue", (req, res) ->
 # Web API Routes
 #
 
-# GET /v1/jobqueue
-router.get "/v1/jobqueue", (req, res) ->
-  JobQueue = require("../../classes/JobQueue")
-  res.json(JobQueue.createJobDataForWebview())
+# GET /v1/queue
+router.get "/v1/queue", (req, res) ->
+  QueueManager = require("../../classes/QueueManager")
+  res.json(QueueManager.createTaskDataForWebview())
   res.end()
 
 # GET /v1/info - show leader + enviroments
@@ -100,8 +100,8 @@ router.get "/v1/module/list/:modulename", (req, res) ->
     res.statusCode = 500
   res.end()
 
-# POST /v1/module/jobqueue/pause/{moduleName} - stop jobqueue of selected module
-router.post "/v1/module/jobqueue/pause/:modulename", (req, res) ->
+# POST /v1/module/queue/pause/{moduleName} - stop queue of selected module
+router.post "/v1/module/queue/pause/:modulename", (req, res) ->
   modules = require("../../classes/Module").modules
   if modules[req.params.modulename]?
     modules[req.params.modulename].pause()
@@ -110,8 +110,8 @@ router.post "/v1/module/jobqueue/pause/:modulename", (req, res) ->
     res.statusCode = 500
   res.end()
 
-# POST /v1/module/jobqueue/resume/{moduleName} - resume jobqueue of selected module
-router.post "/v1/module/jobqueue/resume/:modulename", (req, res) ->
+# POST /v1/module/queue/resume/{moduleName} - resume queue of selected module
+router.post "/v1/module/queue/resume/:modulename", (req, res) ->
   modules = require("../../classes/Module").modules
   if modules[req.params.modulename]?
     modules[req.params.modulename].resume()
@@ -147,17 +147,20 @@ router.get "/v1/module/preset/:modulename", (req, res) ->
 # POST /v1/module/preset - post a new preset to presetstore
 router.post "/v1/module/preset", (req, res) ->
   ModulePreset = require("../../classes/ModulePreset")
-  try
-    preset = [req.body]
-    ModulePreset.sync(
-      ->
-        Q.resolve(preset)
-    , allwaysUpdate = true)
-    res.send("ok")
-    res.end()
-  catch error
-    console.log(error)
-    res.statusCode = 500
+  preset = [req.body]
+  ModulePreset.sync(
+    ->
+      Q.resolve(preset)
+  , allwaysUpdate = true)
+  .then (result) ->
+    res.send(
+      result: result
+    )
+  .catch (error) ->
+    res.send(
+      result: error
+    )
+  .finally ->
     res.end()
 
 # POST /v1/module.sync - for forcing sync
@@ -185,17 +188,20 @@ router.post "/v1/module/sync/:modulename?", (req, res) ->
 # PUT /v1/module/preset - update a preset of a module
 router.put "/v1/module/preset", (req, res) ->
   ModulePreset = require("../../classes/ModulePreset")
-  try
-    preset = [req.body]
-    ModulePreset.sync(
-      ->
-        Q.resolve(preset)
-    , allwaysUpdate = true)
-    res.send("ok")
-    res.end()
-  catch error
-    console.log(error)
-    res.statusCode = 500
+  preset = [req.body]
+  ModulePreset.sync(
+    ->
+      Q.resolve(preset)
+  , allwaysUpdate = true)
+  .then (result) ->
+    res.send(
+      result: result
+    )
+  .catch (error) ->
+    res.send(
+      result: error
+    )
+  .finally ->
     res.end()
 
 # DELETE /v1/module/preset - delete a preset of a module
@@ -203,8 +209,8 @@ router.delete "/v1/module/preset", (req, res) ->
   ModulePreset = require("../../classes/ModulePreset")
   preset = [req.body]
   ModulePreset.remove(preset)
-  .then ->
-    res.send("ok")
+  .then (result) ->
+    res.send(result: result)
   .catch (error) ->
     res.statusCode = 500
     logger.error("DELETE on /preset: " + error, "router.delete /preset")

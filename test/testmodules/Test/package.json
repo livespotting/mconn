@@ -1,0 +1,25 @@
+{
+  "name": "Test",
+  "version": "0.0.6",
+  "description": "MConn Module-Example",
+  "author": "Livespotting Media GmbH",
+  "contributors": [
+    {
+      "name": "Christoph Johannsdotter",
+      "email": "c.johannsdotter@livespottingmedia.com"
+    },
+    {
+      "name": "Jan Stabenow",
+      "email": "j.stabenow@livespottingmedia.com"
+    }
+  ],
+  "license": "Apache 2.0",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/livespotting/mconn-Test.git"
+  },
+  "main": "./module.js",
+  "dependencies": {
+    "q": "*"
+  }
+}

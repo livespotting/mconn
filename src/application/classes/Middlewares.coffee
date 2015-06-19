@@ -13,8 +13,8 @@ host = require("os").hostname()
 Q = require("q")
 zookeeper = require('node-zookeeper-client')
 
-Job = require("./Job")
 logger = require("./Logger")("Middlewares")
+TaskData = require("./TaskData")
 ZookeeperHandler =  require("./ZookeeperHandler")
 
 class Middlewares
@@ -26,6 +26,9 @@ class Middlewares
   @ZookeeperHandler: ->
     return require("./ZookeeperHandler")
 
+  @getModules: ->
+    require("./Module").modules
+
   # middleware to append masterdata from zookeeper to request object
   #
   # @param [http.request] req
@@ -34,30 +37,19 @@ class Middlewares
   #
   @appendMasterDataToRequest: (req, res, next) ->
     logger.debug("INFO", "Fetching data from leading master")
-    Middlewares.ZookeeperHandler().getMasterData().then (masterdata) ->
-      activatedModules = require("./Module").modules
+    Middlewares.ZookeeperHandler().getMasterData()
+    .then (masterdata) ->
       res.locals.mconnenv =
         masterdata: masterdata
-        activatedModules: activatedModules
+        activatedModules: Middlewares.getModules()
         version: process.env.npm_package_version
       vars = require("../App").env_vars
       for e in vars
         res.locals.mconnenv[e.name] = process.env[e.name]
+    .catch (error) ->
+      logger.error error + error.stack
+    .finally ->
       next()
-
-  # middleware to append masterdetection to request object
-  #
-  # @param [http.request] req
-  # @param [http.response] res
-  # @param [Function] next callback-method
-  #
-  @appendIsMasterToRequest: (req, res, next) ->
-    logger.debug("INFO", "Create proxy to leading master")
-    if Middlewares.ZookeeperHandler().isMaster
-      req.isMaster = true
-    else
-      req.isMaster = false
-    next()
 
   # middleware to route the request to master, if this server is not the master or to let it through if this is the master
   #
@@ -89,14 +81,14 @@ class Middlewares
   # @param [Function] next callback-method
   #
   @checkRequestIsValid: (req, res, next) ->
-    logger.debug("INFO", "Validate the incoming job")
+    logger.debug("INFO", "Validate the incoming task")
     if req?.body?.eventType? and req.body.eventType is "status_update_event" or req.body.eventType is "scheduler_registered_event"
       next()
     else
-      res.send(
-        status: "warning",
-        message: "ok, not 'status_udate_event'")
-      res.end()
+      res.json(
+        status: "warning"
+        message: "ok, not 'status_udate_event'"
+      )
       logger.info("Ignoring eventType \"" + req.body.eventType + "\"")
 
   @expressLogger: (req, res, next) ->
@@ -117,14 +109,14 @@ class Middlewares
     res.on "close", log
     next()
 
-  # middleware push the request as Job to JobQueues
+  # middleware push the request as Task to QueueManagers
   #
   # @param [http.request] req
   # @param [http.response] res
   # @param [Function] next callback-method
   #
   @sendRequestToQueue: (req, res, next) ->
-    logger.debug("INFO", "Processing job to \"JobQueue\"")
+    logger.debug("INFO", "Processing task to \"QueueManager\"")
 
     #sync if leader changed on marathon
     if (req.body.eventType is "scheduler_registered_event")
@@ -137,13 +129,13 @@ class Middlewares
       res.end()
     # else it has to be hte "status_update_event", so move on
     else
-      JobQueue = require("./JobQueue")
-      mconnjob = new Job(req, res)
-      JobQueue.add(mconnjob)
+      QueueManager = require("./QueueManager")
+      taskData = new TaskData(req)
+      QueueManager.add(taskData)
       res.send(
         status: "ok"
         message: "ok from " + res.locals.mconnenv.masterdata.serverdata.serverurl
-        orderId: mconnjob.data.orderId
+        orderId: taskData.getData().orderId
       )
       res.end()
 

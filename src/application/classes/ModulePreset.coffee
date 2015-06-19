@@ -58,7 +58,7 @@ class ModulePreset
   @readConfigsFromZookeeper: ->
     return ZookeeperHandler.getChildren("presets")
 
-  # determines diff between return of presetSourceMethod and current zookeeper storage and
+  # determines diff between return of presetSourceMethod and active zookeeper storage and
   # creates an array of presets, that have not yet been added to zookeeper
   #
   # @param [Function] presetSourceMethod has to be a promise returning method, that resolves with an array
@@ -96,7 +96,7 @@ class ModulePreset
       deferred.reject(error)
     deferred.promise
 
-  # syncs difference between presetSourceMethod and current zk storage on zk storage
+  # syncs difference between presetSourceMethod and active zk storage on zk storage
   #
   # @param [Function] presetSourceMethod has to be a promise returning method, that resolves with an array
   # of the presets [{appId: dev-app-1, options:{}...},{appId: dev-app-2 ...]
@@ -105,6 +105,7 @@ class ModulePreset
   #
   @sync: (presetSourceMethod, allwaysUpdate = false) ->
     deferred = Q.defer()
+    errors = []
     @diff(presetSourceMethod, allwaysUpdate)
     .then (result) ->
       count = 0
@@ -129,11 +130,15 @@ class ModulePreset
             Module.modules[preset.moduleName].updatePresetsOnGui()
             count++
           .catch (error) ->
+            errors.push error
             logger.error(error)
           .finally ->
             done()
         , ->
-          deferred.resolve(count)
+          deferred.resolve(
+            count: count
+            errors: errors
+          )
       )
     deferred.promise
 
@@ -145,17 +150,22 @@ class ModulePreset
   #
   @remove: (presets) ->
     deferred = Q.defer()
+    errors = []
     async.each(presets,
       (preset, done) ->
         clearedAppName = preset.appId.split("/")[1]
         logger.warn("Remove preset \"" + preset.appId + "\" for module \"#{preset.moduleName}\"")
         ZookeeperHandler.remove("modules/#{preset.moduleName}/presets/#{clearedAppName}")
         .catch (error) ->
-          logger.error("Error removing node \"" + clearedAppName + "\" \"" + error.toString(), "\"")
+          message = "Error removing preset #{preset.appId} for  \"" + preset.moduleName + "\" \"" + error.toString() +  "\": not found"
+          errors.push message
+          logger.error message
         .finally ->
           done()
       , ->
-        deferred.resolve()
+        deferred.resolve(
+          errors: errors
+        )
     )
     deferred.promise
 

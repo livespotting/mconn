@@ -8,17 +8,17 @@
                         th(style='width:35%;') Task ID
                         th Task Status
                         th(style='width:25%;') Module State
-                        th.text-right Timestamp
+                        th.text-right Seniority
                 tbody(class="ng-cloak")
-                    tr(ng-repeat="job in jobs")
-                        td {{job.marathonData.appId}}
-                        td {{job.marathonData.taskId}}
-                        td {{job.marathonData.taskStatus}}
+                    tr(ng-repeat="task in tasks")
+                        td {{task.data.appId}}
+                        td {{task.data.taskId}}
+                        td {{task.data.taskStatus}}
                         td
-                            div(ng-repeat="state in job.moduleState")
+                            div(ng-repeat="state in task.moduleState")
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-finished(ng-if="state.state=='finished'") {{state.name}}
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-idle(ng-if="state.state=='idle'") {{state.name}}
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-failed(ng-if="state.state=='failed'") {{state.name}}
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-started(ng-if="state.state=='started'") {{state.name}}
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-nopreset(ng-if="state.state=='nopreset'") {{state.name}}
-                        td.text-right {{job.marathonData.timestamp}}
+                        td.text-right {{task.data.timestamp | date:'yyyy-MM-dd, HH:mm:ss'}}

@@ -37,17 +37,12 @@ class App
     default: if process.env.JENKINS_HOME then "/jenkins/workspace/mconn/" else "/application"
     description: "Path of the modules to be loaded"
   ,
-    name: "MCONN_DEBUG"
-    required: false
-    default: false
-    description: "Generate more messages on stdout"
-  ,
-    name: "MCONN_JOBQUEUE_TIMEOUT"
+    name: "MCONN_QUEUE_TIMEOUT"
     required: false
     default: 60000
     description: "Timout until a job has to be finished"
   ,
-    name: "MCONN_JOBQUEUE_SYNC_TIME"
+    name: "MCONN_INVENTORY_SYNC_TIME"
     required: false
     default: 600000
     description: "Global time to start Marathon-Sync"
@@ -118,13 +113,13 @@ class App
         if process.env[e.name]?
           logger.info("ENV \"#{e.name}=" + process.env[e.name] + "\", #{e.description}")
         else if e.required
-          console.log ("No value set for env #{e.name}, but it is required!").red.bold
+          logger.error ("No value set for env #{e.name}, but it is required!").red.bold
           killProcess = true
         else
           process.env[e.name] = e.default
           logger.info("ENV \"#{e.name}=#{e.default}\", default value, #{e.description}")
       if killProcess
-        console.log ("MConn stops because required env-vars are not set").red.bold
+        logger.error ("MConn stops because required env-vars are not set").red.bold
         process.kill()
       return
 
@@ -154,12 +149,20 @@ class App
     modules = require("./classes/Module").modules
     for modulename, module of modules
       io.of("/#{modulename}").on("connection", (socket) ->
-        require("./classes/JobQueue").WS_SendAllJobs(socket)
+        require("./classes/QueueManager").WS_SendAllTasks(socket)
       )
     io.of("/home").on("connection", (socket) ->
-      require("./classes/JobQueue").WS_SendAllJobs(socket)
+      require("./classes/QueueManager").WS_SendAllTasks(socket)
     )
 
+  @registerMconnMiddlewares: (app) ->
+    # add middlewares
+    app.use Middlewares.expressLogger
+    app.use Middlewares.appendMasterDataToRequest
+    app.post /v1/, Middlewares.route
+    app.get "/v1/queue", Middlewares.route
+    app.post "/v1/queue", Middlewares.checkRequestIsValid
+    app.post "/v1/queue", Middlewares.sendRequestToQueue
   # start the webserver
   #
   # @param [Number] port of webserver to listen to
@@ -190,14 +193,9 @@ class App
       @app.use bodyParser.urlencoded({extended: true})
       @app.use cookieParser()
       @app.use compression()
-      # add middlewares
-      @app.use Middlewares.expressLogger
-      @app.use Middlewares.appendMasterDataToRequest
-      @app.use "/v1/jobqueue", Middlewares.appendIsMasterToRequest
-      @app.post /v1/, Middlewares.route
-      @app.get "/v1/jobqueue", Middlewares.route
-      @app.post "/v1/jobqueue", Middlewares.checkRequestIsValid
-      @app.post "/v1/jobqueue", Middlewares.sendRequestToQueue
+
+      @registerMconnMiddlewares(@app)
+
       for modulename, staticPath of @expressStatics
         @app.use "/#{modulename}/", express.static(staticPath, {maxage: oneYear})
       @app.use express.static(path.join(__dirname, "webserver/public"), {maxage: oneYear})
@@ -224,9 +222,9 @@ class App
       io = require('socket.io').listen(server)
       @app.set("io", io)
       @registerWebsocketEvents(io)
-      logger.info("Webserver started on \"" + process.env.MCONN_HOST + ":" + process.env.MCONN_PORT + "\"")
+      logger.info("Webserver started on \"" + process.env.MCONN_HOST + ":" + port + "\"")
       logger.info("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
     catch error
-      console.log error
+      logger.error error
 
 module.exports = App

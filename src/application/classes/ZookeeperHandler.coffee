@@ -163,7 +163,7 @@ class ZookeeperHandler
     deferred = Q.defer()
     @createPathIfNotExist("leader")
     .then => @createPathIfNotExist("inventory")
-    .then => @createPathIfNotExist("jobqueue")
+    .then => @createPathIfNotExist("queue")
     .catch (error) ->
       logger.info(error)
     .finally ->
@@ -211,22 +211,16 @@ class ZookeeperHandler
   # @return [Promise]
   #
   @electMaster: ->
-    JobQueue = require("./JobQueue")
+    QueueManager = require("./QueueManager")
     logger.debug("INFO", "Initiate master election")
     App = require("../App")
     Module = require("./Module")
-
-    #    Module.allModulesLoadedDeferred.promise
-    #    .then ->
-    #        App.renderApplication()
-    #    .catch (error) ->
-    #      console.log(error)
     @checkIsMaster().then (ismaster) =>
       if ismaster
         unless @isMaster
           @isMaster = true
           logger.info("This node is the new leading master")
-          @recoverJobs().then ->
+          @recoverTasks().then ->
             Module = require("./Module")
             modules = Module.modules
             for name, module of modules
@@ -247,7 +241,7 @@ class ZookeeperHandler
       deferred.resolve(ids[0])
     deferred.promise
 
-  # check if current server is the master
+  # check if active server is the master
   #
   # @return [Promise] resolves with Boolean
   #
@@ -261,7 +255,7 @@ class ZookeeperHandler
         deferred.resolve(false)
     deferred.promise
 
-  # get data of the current leading master
+  # get data of the active leading master
   #
   # @return [Promise] resolves with data of leading master
   #
@@ -292,34 +286,33 @@ class ZookeeperHandler
         deferred.resolve(children)
     deferred.promise
 
-  # recover jobs from zookeeper
+  # recover tasks from zookeeper
   #
   # @return [Promise]
   #
-  @recoverJobs: =>
-    logger.debug("INFO", "Initiate recovering of jobs")
+  @recoverTasks: =>
+    logger.debug("INFO", "Initiate recovering of tasks")
     deferred = Q.defer()
-    JobQueue = require("./JobQueue")
-    Job = require("./Job")
+    QueueManager = require("./QueueManager")
+    TaskData = require("./TaskData")
     Module = require("./Module")
     logger.debug("INFO", "wait for all modules to be loaded")
     Module.allModulesLoadedDeferred.promise
     .then =>
-      logger.debug("INFO", "Start recovering jobs")
-      @client.getChildren @namespace() + "/jobqueue", (error, children, stat) =>
-        # todo, move the following code to JobQueue as recovery method
-        logger.info("Recovering \"#{children.length}\" jobs")
+      logger.debug("INFO", "Start recovering tasks")
+      @client.getChildren @namespace() + "/queue", (error, children, stat) =>
+        logger.info("Recovering \"#{children.length}\" tasks")
         if children.length is 0 then deferred.resolve()
         async.each(children, (c, callback) =>
-          @getData("jobqueue/" + c)
+          @getData("queue/" + c)
           .then (data) ->
-            logger.info("Recovering unfinished job \"#{c}\"")
-            JobQueue.add(Job.load(data), recovery = true)
+            logger.info("Recovering unfinished task \"#{c}\"")
+            QueueManager.add(TaskData.load(data), recovery = true)
             callback()
           .catch (error) ->
             logger.error("Error on leading master processes \"" + error + error.stack + "\"")
           (result) ->
-            logger.info("\"#{children.length}\" prior jobs recovered")
+            logger.info("\"#{children.length}\" prior tasks recovered")
             deferred.resolve()
         )
 

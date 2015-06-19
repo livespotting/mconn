@@ -12,7 +12,7 @@
 App = require("./App")
 require("./webserver/config/config")
 
-JobQueue = require("./classes/JobQueue")
+QueueManager = require("./classes/QueueManager")
 
 App.checkEnvironment().then ->
   App.initZookeeper()

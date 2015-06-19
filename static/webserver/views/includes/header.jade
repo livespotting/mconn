@@ -6,7 +6,7 @@ nav.navbar.navbar-default.navbar-static-top(role='navigation')
               span.icon-bar
               span.icon-bar
               span.icon-bar
-          a.navbar-brand(href='/#/jobqueue')
+          a.navbar-brand(href='/#/queue')
               img.logo(src='/images/logo.png')
       #navbar.navbar-collapse.collapse(ng-controller="NavCtrl")
           ul.nav.navbar-nav
@@ -15,9 +15,9 @@ nav.navbar.navbar-default.navbar-static-top(role='navigation')
                      a(href='/#/modules/#{module.name}/main') #{module.name}
 
           ul.nav.navbar-nav.navbar-right
-              li(ng-class="classActiveMainMenu('/jobqueue')")
-                  a(href='/#/jobqueue') Job Queue
-                      span.badge(ng-if="numberOfJobs != 0", class="ng-cloak") {{numberOfJobs}}
+              li(ng-class="classActiveMainMenu('/queue')")
+                  a(href='/#/queue') Queue
+                      span.badge(ng-if="numberOfTasks != 0", class="ng-cloak") {{numberOfTasks}}
               li.about
                   a(href='#', data-toggle='modal', data-target='#about') About
               li.docs

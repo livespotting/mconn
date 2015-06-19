@@ -1,0 +1,15 @@
+extends layout
+
+block right
+    .bs-table
+        table.table.table-hover
+            thead
+                tr
+                    th App ID
+                    th Options
+                    th Status
+            tbody
+                tr(ng-repeat="preset in presets")
+                    td {{preset.appId}}
+                    td {{preset.options}}
+                    td {{preset.status}}

@@ -9,27 +9,24 @@
 # @author Jan Stabenow [j.stabenow@livespottingmedia.com]
 #
 
-this.app.controller 'jobsController', [
+this.app.controller 'tasksController', [
   '$scope'
   '$rootScope'
   ($scope, $rootScope) ->
     $rootScope.socket = window.connectToNamespace("home", $rootScope)
-    $scope.numberOfJobs = 0
+    $scope.numberOfTasks = 0
     'use strict'
     $rootScope.socket.on 'connect', ->
-      $rootScope.socket.emit 'getJobs', initial: true
-      $rootScope.socket.on 'gotMConnEnv', (mconnenv) ->
-        console.log mconnenv
-      $rootScope.socket.on 'allJobs', (jobs) ->
+      $rootScope.socket.emit 'getTasks', initial: true
+      $rootScope.socket.on 'allTasks', (tasks) ->
         $scope.$apply ->
-          $scope.jobs = jobs
-          totalJobsCount = if jobs.length then jobs.length else 0 # +1 for active element
-          $rootScope.numberOfJobs = totalJobsCount
-          console.log $rootScope.numberOfJobs
-      $rootScope.socket.on 'updateJobTime', (time) ->
-        $scope.jobtime = time
-      $rootScope.socket.on 'removeActiveJob', (jobData) ->
-        $scope.activeJob = null
+          $scope.tasks = tasks
+          totalTasksCount = if tasks.length then tasks.length else 0 # +1 for active element
+          $rootScope.numberOfTasks = totalTasksCount
+      $rootScope.socket.on 'updateTaskTime', (time) ->
+        $scope.tasktime = time
+      $rootScope.socket.on 'removeActiveTask', ->
+        $scope.activeTask = null
       return
 ]
 
