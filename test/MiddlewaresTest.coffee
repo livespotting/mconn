@@ -23,7 +23,6 @@ Middlewares = require("../src/application/classes/Middlewares")
 routes = require("../src/application/webserver/routes/index")
 MainApp = require("../src/application/App")
 
-process.env.LOGGER_MUTED = true
 check = ( done, f )  ->
   try
     f()
