@@ -45,7 +45,7 @@ mconn3 = null
 describe "Leader Election Tests", ->
   body = null
   before (done) ->
-    this.timeout(50000)
+    this.timeout(if process.env.TRAVIS then 90000 else 30000)
     mconn1 = new Manager("bin/start.js",
       name: "MCONN_NODE_1"
       MCONN_HOST: "127.0.0.1"
@@ -55,7 +55,7 @@ describe "Leader Election Tests", ->
       MCONN_ZK_HOSTS: if process.env.ALIAS_PORT_2181_TCP_ADDR? then process.env.ALIAS_PORT_2181_TCP_ADDR + ":2181" else "127.0.0.1:2181"
       MCONN_ZK_PATH: "/mconn-dev"
     )
-    Q.delay(10000)
+    Q.delay(if process.env.TRAVIS then 25000 else 10000)
     .then ->
       mconn2 = new Manager("bin/start.js",
         name: "MCONN_NODE_2"
@@ -67,7 +67,7 @@ describe "Leader Election Tests", ->
         MCONN_ZK_PATH: "/mconn-dev"
       )
       return Q.resolve()
-    .delay(10000)
+    .delay(if process.env.TRAVIS then 25000 else 10000)
     .then ->
       mconn3 = new Manager("bin/start.js",
         name: "MCONN_NODE_3"
@@ -79,12 +79,12 @@ describe "Leader Election Tests", ->
         MCONN_ZK_PATH: "/mconn-dev"
       )
       return Q.resolve()
-    .delay(10000)
+    .delay(if process.env.TRAVIS then 25000 else 10000)
     .then -> done()
 
   describe "check first startup election", ->
     it "should return the same result for all three nodes", (done) ->
-      this.timeout(5000)
+      this.timeout(if process.env.TRAVIS then 7500 else 5000)
       body1 = null
       body2 = null
       body3 = null
@@ -105,11 +105,11 @@ describe "Leader Election Tests", ->
 
     describe "exit current leader", ->
       before (done) ->
-        this.timeout(15000)
+        this.timeout(if process.env.TRAVIS then 25000 else 15000)
         request.get "http://127.0.0.1:1240/v1/leader", {json: true}, (error, req, body) ->
           leaderBefore = body.leader
           request.post "http://127.0.0.1:1242/v1/exit/leader", {json: true}, (error, req, body) ->
-            Q.delay(10000).then ->
+            Q.delay(if process.env.TRAVIS then 25000 else 10000).then ->
               request.get "http://127.0.0.1:1241/v1/leader", {json: true}, (error, req, body) ->
                 leaderAfter1 = body.leader
                 request.get "http://127.0.0.1:1242/v1/leader", {json: true}, (error, req, body) ->
@@ -127,10 +127,10 @@ describe "Leader Election Tests", ->
             expect(body.leader).equal(leaderAfter1)
 
   after (done) ->
-    this.timeout(7500)
+    this.timeout(if process.env.TRAVIS then 10000 else 7500)
     mconn1.kill()
     mconn2.kill()
     mconn3.kill()
-    Q.delay(5000).then ->
+    Q.delay(if process.env.TRAVIS then 7500 else 5000).then ->
       deferred.resolve()
       done()
