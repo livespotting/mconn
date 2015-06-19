@@ -2,8 +2,8 @@ language: node_js
 before_script:
   - sudo apt-get update -qq
   - sudo apt-get install -y zookeeper
-  - sudo /usr/share/zookeeper/bin/zkServer.sh start
   - npm install -g coffee-script coffeelint grunt-cli bower mocha chai
+  - bower install --allow-root
 node_js:
   - "0.12"
-script: npm install && bower install --allow-root && export MCONN_TEST_SHOW_APP_LOGS=true && export NODE_ENV=development && grunt test-cli
+script: sudo /usr/share/zookeeper/bin/zkServer.sh start && env && grunt test-cli
