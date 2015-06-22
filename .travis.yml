@@ -1,8 +1,14 @@
 language: node_js
 before_script:
+  - wget http://apache.openmirror.de/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz
+  - tar xf zookeeper-3.4.6.tar.gz
+  - cp zookeeper-3.4.6/conf/zoo_sample.cfg zookeeper-3.4.6/conf/zoo.cfg
+  - chmod +x zookeeper-3.4.6/bin/zkServer.sh
+  - mkdir -p /tmp/zookeeper
   - npm install -g coffee-script coffeelint grunt-cli bower mocha chai
   - bower install --allow-root
 node_js:
   - "0.12"
 script: 
-  - grunt build
+  - zookeeper-3.4.6/bin/zkServer.sh start
+  - grunt test-cli

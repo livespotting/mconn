@@ -22,7 +22,8 @@ module.exports = (script, env, killTimeoutMS) ->
     reset: '[0m'
 
   @intro = ->
-    colors.grey + moment().format('YYYY-MM-DD HH:mm:ss') + colors.reset + (if @env.name then ' [' + colors.blue + @env.name + colors.reset + '] ' else if @pid then ' [' + colors.blue + @pid + colors.reset + '] ' else ' ')
+    colors.grey + moment().format('YYYY-MM-DD HH:mm:ss') + colors.reset + (if @env.name then ' [' + colors.blue +
+      @env.name + colors.reset + '] ' else if @pid then ' [' + colors.blue + @pid + colors.reset + '] ' else ' ')
 
   # This method spawns or respawns our process, and monitors stdout, sterr and makes sure its running
   #
@@ -37,13 +38,13 @@ module.exports = (script, env, killTimeoutMS) ->
     # Lets relay the console logs.
     @child.stdout.on 'data', ((buf) ->
       # @todo consider logging each service
-      unless process.env.LOGGER_MUTED then process.stdout.write(this.intro() + buf)
+      if process.env.MCONN_TEST_SHOW_APP_LOGS then process.stdout.write(this.intro() + buf)
       return
     ).bind(this)
     # Lets relay the error logs.
     @child.stderr.on 'data', ((buf) ->
       # @todo consider logging each service
-      unless process.env.LOGGER_MUTED then process.stderr.write(this.intro() + buf)
+      if process.env.MCONN_TEST_SHOW_APP_LOGS then process.stderr.write(this.intro() + buf)
       return
     ).bind(this)
     # Lets respawn the process unless we are in exit mode.
