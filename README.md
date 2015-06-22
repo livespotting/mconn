@@ -39,6 +39,7 @@ MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitat
 * [Marathon](https://github.com/mesosphere/marathon) (tested with 0.8.2)
 * [Mesos-DNS](https://github.com/mesosphere/mesos-dns) (tested with 0.1.2)
 * [Docker](http://docker.com) (tested with 1.6.2)
+* [Zookeeper](http://zookeeper.apache.org) (3.4.5+)
 
 You have to assure that Mesos-DNS and each hostname can also be reached by Mesos-Slaves.
 
