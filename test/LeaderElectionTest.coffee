@@ -42,7 +42,7 @@ mconn1 = null
 mconn2 = null
 mconn3 = null
 
-xdescribe "Leader Election Tests", ->
+describe "Leader Election Tests", ->
   body = null
   before (done) ->
     this.timeout(50000)
