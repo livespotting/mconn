@@ -21,4 +21,4 @@
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-failed(ng-if="state.state=='failed'") {{state.name}}
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-started(ng-if="state.state=='started'") {{state.name}}
                                 a(href="/modules/{{state.name}}/queue"): span.label.label-nopreset(ng-if="state.state=='nopreset'") {{state.name}}
-                        td.text-right {{task.data.timestamp | date:'yyyy-MM-dd, HH:mm:ss'}}
+                        td.text-right(ng-bind="duration(task.data.timestamp)")

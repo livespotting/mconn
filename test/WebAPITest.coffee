@@ -51,13 +51,13 @@ describe "WebAPI Tests", ->
     Q.delay(10000).then -> done()
 
   describe "GET /v1/queue", ->
-    it "should be empty object", (done) ->
+    it "should return an empty object", (done) ->
       request.get "http://127.0.0.1:1240/v1/queue", {json: true}, (error, req, body) ->
         check done, ->
-          expect(isEmpty(body)).equal(true)
+          expect(isEmpty(body)).equal(true, "body is " + JSON.stringify(body))
 
-  describe "POST /v1/queue", ->
-    it "should be status/message 'ok'", (done) ->
+  describe "POST valid task-json to /v1/queue", ->
+    it "should return status/message 'ok'", (done) ->
       options =
         uri: "http://127.0.0.1:1240/v1/queue"
         method: "POST"
@@ -72,7 +72,9 @@ describe "WebAPI Tests", ->
       request options, (error, req, body) ->
         check done, ->
           expect(body.status).equal('ok')
-    it "should be status/message 'warning'", (done) ->
+
+  describe "POST invalid task-json (unknown eventType) to /v1/queue", ->
+    it "should return status/message 'warning'", (done) ->
       options =
         uri: "http://127.0.0.1:1240/v1/queue"
         method: "POST"
@@ -89,19 +91,19 @@ describe "WebAPI Tests", ->
           expect(body.status).equal('warning')
 
   describe "GET /v1/module/list", ->
-    it "should be empty object", (done) ->
+    it "should return an empty object", (done) ->
       request.get "http://127.0.0.1:1240/v1/module/list", {json: true}, (error, req, body) ->
         check done, ->
           expect(isEmpty(body)).equal(true)
 
   describe "GET /v1/module/list/HelloWorld", ->
-    it "should be status code 500", (done) ->
+    it "should return with status-code 500", (done) ->
       request.get "http://127.0.0.1:1240/v1/module/list/HelloWorld", {json: true}, (error, req, body) ->
         check done, ->
           expect(req.statusCode).equal(500)
 
   describe "POST /v1/module/preset", ->
-    it "should be error, Module HelloWorld is not enabled", (done) ->
+    it "should return error 'Module HelloWorld is not enabled'", (done) ->
       options =
         uri: "http://127.0.0.1:1240/v1/module/preset"
         method: "POST"

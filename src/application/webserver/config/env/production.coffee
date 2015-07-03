@@ -20,6 +20,7 @@ module.exports =
         'lib/bootstrap/dist/js/bootstrap.min.js'
         'lib/angular/angular.min.js'
         'lib/angular-route/angular-route.min.js'
+        'lib/moment/min/moment.min.js'
       ]
     css: [ 'dist/application.min.css' ]
     js: [ 'dist/application.min.js']

@@ -47,7 +47,7 @@ class Middlewares
       for e in vars
         res.locals.mconnenv[e.name] = process.env[e.name]
     .catch (error) ->
-      logger.error error + error.stack
+      logger.error(error, error.stack)
     .finally ->
       next()
 
@@ -67,7 +67,7 @@ class Middlewares
         json: req.body
       request options, (err, response, body) ->
         if err
-          logger.error("Error by proxying request to leader \"" + err.toString() + "\"")
+          logger.error("Error by proxying request to leader \"" + err.toString() + "\"","")
         res.send(body)
         res.end()
     #this node is the master, so go to next middleware

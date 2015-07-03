@@ -12,6 +12,11 @@
 moment = require("moment")
 require("colors")
 
+LEVEL_ERROR = 1
+LEVEL_WARN = 2
+LEVEL_INFO = 3
+LEVEL_DEBUG = 4
+
 # create logs on console
 #
 class Logger
@@ -25,7 +30,7 @@ class Logger
   # is the logger muted?? (used in unit tests)
   #
   @isMuted: ->
-    process.env.LOGGER_MUTED
+    return process.env.LOGGER_MUTED
 
   # get the last 'items' items of the log
   #
@@ -44,7 +49,6 @@ class Logger
   logMessage: (message, context, type, color) ->
     if Logger.isMuted() then return
     str =  "[#{moment().format('DD-MM-YYYY HH:mm:ss')}] [#{type}] #{message} (#{context})"
-
     # print on console
     unless color
       console.log(str)
@@ -57,7 +61,8 @@ class Logger
   # @param [String] Context of log (classname where the log occured)
   #
   info: (message, context = @context) ->
-    @logMessage(message, context, "INFO", false)
+    if process.env.MCONN_LOGGER_LEVEL >= LEVEL_INFO
+      @logMessage(message, context, "INFO", false)
 
   # log warning
   #
@@ -65,21 +70,23 @@ class Logger
   # @param [String] Context of log (classname where the log occured)
   #
   warn: (message, context = @context) ->
-    if process.env.NODE_ENV is "development"
-      @logMessage(message, context, "WARN", "red")
-    else
-      @logMessage(message, context, "WARN", false)
+    if process.env.MCONN_LOGGER_LEVEL >= LEVEL_WARN
+      if process.env.NODE_ENV is "development"
+        @logMessage(message, context, "WARN", "red")
+      else
+        @logMessage(message, context, "WARN", false)
 
   # log error
   #
   # @param [String] Message
   # @param [String] Context of log (classname where the log occured)
   #
-  error: (message, context = @context) ->
-    if process.env.NODE_ENV is "development"
-      @logMessage(message, context, "ERROR", "red")
-    else
-      @logMessage(message, context, "ERROR", false)
+  error: (message, stack, context = @context) ->
+    if process.env.MCONN_LOGGER_LEsVEL >= LEVEL_ERROR
+      if process.env.NODE_ENV is "development" or process.env.MCONN_LOGGER_LEVEL >= LEVEL_DEBUG
+        @logMessage(message + stack, context, "ERROR", "red")
+      else
+        @logMessage(message, context, "ERROR", false)
 
   # log debug
   #
@@ -87,7 +94,7 @@ class Logger
   # @param [String] Context of log (classname where the log occured)
   #
   debug: (type, message, context = @context, color = "yellow") ->
-    if process.env.NODE_ENV is "development"
+    if process.env.MCONN_LOGGER_LEVEL >= LEVEL_DEBUG
       @logMessage(message[color], context, "DEBUG", false)
 
 # export new loggerinstance with context

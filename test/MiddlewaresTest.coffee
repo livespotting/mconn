@@ -23,7 +23,6 @@ Middlewares = require("../src/application/classes/Middlewares")
 routes = require("../src/application/webserver/routes/index")
 MainApp = require("../src/application/App")
 
-process.env.LOGGER_MUTED = true
 check = ( done, f )  ->
   try
     f()
@@ -32,7 +31,6 @@ check = ( done, f )  ->
     done(e)
 
 describe "Middlewares", ->
-
   describe "appendMasterDataToRequest", ->
     server = null
     app = null
@@ -55,7 +53,6 @@ describe "Middlewares", ->
       #register appendMasterDataToRequest middleware
       app.use "/", Middlewares.appendMasterDataToRequest
       server = http.createServer(app).listen(11223)
-
     it "should append masterdata to response locals", (done) ->
       app.get "/appendMasterdata", (req, res) ->
         check done, ->
@@ -74,7 +71,6 @@ describe "Middlewares", ->
           expect(res.locals.mconnenv.version).equal(process.env.npm_package_version)
         res.end()
       request.get "http://localhost:11223/version"
-
     afterEach ->
       server.close()
 
@@ -132,7 +128,6 @@ describe "Middlewares", ->
       app2.use bodyParser.json()
       app2.use bodyParser.urlencoded({extended: true})
       server2 = http.createServer(app2).listen(11224)
-
     it "should redirect any GET requests to masterserver with same url", (done) ->
       #check if proxied request is incoming on server2 :11224
       app2.get "/v1/anyurl", (req, res) ->
@@ -155,7 +150,6 @@ describe "Middlewares", ->
         json:
           myFunkyParameter: "funk is in the house"
       request options
-
     afterEach ->
       server.close()
       server2.close()

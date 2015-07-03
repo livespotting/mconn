@@ -31,7 +31,6 @@ exampleRequestData =
     host: "testhost"
 
 describe "TaskData", ->
-
   describe "constructor", (done) ->
     it "should fill all TaskData.availableFields with data from request", ->
       taskData = new TaskData(exampleRequestData)

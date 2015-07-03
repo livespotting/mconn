@@ -20,6 +20,7 @@ module.exports =
         'lib/bootstrap/dist/js/bootstrap.js'
         'lib/angular/angular.js'
         'lib/angular-route/angular-route.js'
+        'lib/moment/moment.js'
       ]
     css: [ 'css/mconn.css' ]
     js: [

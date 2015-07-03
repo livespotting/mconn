@@ -38,7 +38,7 @@ MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitat
 * [Mesos](http://mesos.apache.org) (tested with 0.22.1)
 * [Marathon](https://github.com/mesosphere/marathon) (tested with 0.8.2)
 * [Mesos-DNS](https://github.com/mesosphere/mesos-dns) (tested with 0.1.2)
-* [Docker](http://docker.com) (tested with 1.6.2)
+* [Docker](http://docker.com) (tested with 1.6.2+)
 * [Zookeeper](http://zookeeper.apache.org) (3.4.5+)
 
 You have to assure that Mesos-DNS and each hostname can also be reached by Mesos-Slaves.
@@ -79,7 +79,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "livespotting/mconn:0.0.8",
+            "image": "livespotting/mconn:0.0.9",
             "network": "HOST"
         },
         "volumes": []

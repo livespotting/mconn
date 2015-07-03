@@ -1,3 +1,27 @@
+### Changes from 0.0.8 to 0.0.9
+
+- new env MCONN_LOGGER_LEVEL
+ - 1 = Errors
+ - 2 = Errors, Warning
+ - 3 = Errors, Warning, Info (default)
+ - 4 = Errors, Warning, Info, Debug 
+- removed time based sync on non-leader
+- cleanup the Zk-Node
+- PUT /v1/module/preset will now be forwared to the leader
+- presets can be disabled now
+- the queue show now the task age
+- better error reporting (log level 4 now shows error-stacks)
+- reduced zookeeper-communication
+ - leaderdata will be cached
+ - presets will be cached
+- modules queue and inventory are now accessable over the WebAPI
+- module queue will be tested now
+- module inventory will be tested now
+- module sync will be tested now
+- updated npm dependencies
+- updated bower packages
+- updated to node v. 0.12.5
+
 ### Changes from 0.0.7 to 0.0.8
 
 * re-engineered naming and code cleaned up:

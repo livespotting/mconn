@@ -13,13 +13,12 @@ nav.navbar.navbar-default.navbar-static-top(role='navigation')
               each module in mconnenv.activatedModules
                   li(ng-class="classActiveMainMenu('/modules/#{module.name}/main')")
                      a(href='/#/modules/#{module.name}/main') #{module.name}
-
           ul.nav.navbar-nav.navbar-right
               li(ng-class="classActiveMainMenu('/queue')")
                   a(href='/#/queue') Queue
                       span.badge(ng-if="numberOfTasks != 0", class="ng-cloak") {{numberOfTasks}}
               li.about
-                  a(href='#', data-toggle='modal', data-target='#about') About
+                  a(href='', data-toggle='modal', data-target='#about') About
               li.docs
                   a(href='https://github.com/livespotting/mconn', target='_blank')
                       | Docs

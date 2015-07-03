@@ -13,6 +13,7 @@ async = require("async")
 Q = require("q")
 zookeeper = require("node-zookeeper-client")
 
+Module = require("./Module")
 logger = require("./Logger")("ModulePreset")
 ZookeeperHandler = require("./ZookeeperHandler")
 
@@ -44,11 +45,13 @@ class ModulePreset
         .then (content) ->
           fileContents.push(JSON.parse(content))
         .catch (error) ->
-          logger.error("Error reading preset " + error.toString())
+          logger.error("Error reading preset " + error.toString(), error.stack)
         .finally -> done()
       , ->
         deferred.resolve(fileContents)
       )
+    .catch (error) ->
+      logger.error(error, error.stack)
     deferred.promise
 
   # read available presets from zookeeper
@@ -85,14 +88,14 @@ class ModulePreset
             sc.lastEdit = false
             pushToZookeeper.push(sc)
         .catch (error) ->
-          logger.error("Create error \"" + error + "\"")
+          logger.error("Create error \"" + error + "\"", error.stack)
         .finally ->
           done()
       , ->
         deferred.resolve(pushToZookeeper)
       )
     .catch (error) ->
-      logger.error("Create error \"" + error.toString() + " " + error.stack + "\"")
+      logger.error("Create error \"" + error.toString() + " " + "\"", error.stack)
       deferred.reject(error)
     deferred.promise
 
@@ -106,40 +109,64 @@ class ModulePreset
   @sync: (presetSourceMethod, allwaysUpdate = false) ->
     deferred = Q.defer()
     errors = []
+    count = 0
     @diff(presetSourceMethod, allwaysUpdate)
-    .then (result) ->
-      count = 0
+    .then (result) =>
       async.each(result,
-        (preset, done) ->
+        (preset, done) =>
           clearedAppName = preset.appId.split("/")[1]
           Module = require("./Module")
           unless Module.isEnabled(preset.moduleName)
-            promise = Q.reject("Module \"#{preset.moduleName}\" is not enabled - skipping preset for app \"#{clearedAppName}\"")
-          else
-            if preset.lastEdit
-              logger.info("Forward preset update \"#{clearedAppName}\" for module \"#{preset.moduleName}\" to
-                ZookeeperHandler")
-              promise = ZookeeperHandler.setData("modules/#{preset.moduleName}/presets/#{clearedAppName}",preset)
-            else
-              logger.info("Forward preset creation \"#{clearedAppName}\" for module \"#{preset.moduleName}\" to
-                ZookeeperHandler")
-              promise = ZookeeperHandler.createNode("modules/#{preset.moduleName}/presets/#{clearedAppName}",
-                new Buffer(JSON.stringify(preset)), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
-          promise
-          .then ->
-            Module.modules[preset.moduleName].updatePresetsOnGui()
-            count++
-          .catch (error) ->
-            errors.push error
-            logger.error(error)
-          .finally ->
+            message = "Module \"#{preset.moduleName}\" is not enabled - skipping preset for app \"#{clearedAppName}\""
+            logger.error(message, "")
+            errors.push(message)
             done()
+          else
+            count++
+            if preset.lastEdit
+              @editPreset(preset, clearedAppName, done)
+            else
+              @createPreset(preset, clearedAppName, done)
         , ->
           deferred.resolve(
             count: count
             errors: errors
           )
       )
+    .catch (error) ->
+      logger.error(error, error.stack)
+    deferred.promise
+
+  @editPreset: (preset, clearedAppName, done) ->
+    deferred = Q.defer()
+    logger.info("Forward preset update \"#{clearedAppName}\" for module \"#{preset.moduleName}\" to
+                ZookeeperHandler")
+    ZookeeperHandler.setData("modules/#{preset.moduleName}/presets/#{clearedAppName}",preset)
+    .then ->
+      Module.modules[preset.moduleName].updatePresetsOnGui()
+      Module.modules[preset.moduleName].editPreset(preset)
+      deferred.resolve()
+    .catch (error) ->
+      logger.error(error, error.stack)
+      deferred.reject(error)
+    .finally ->
+      done()
+    deferred.promise
+
+  @createPreset: (preset, clearedAppName, done) ->
+    deferred = Q.defer()
+    logger.info("Forward preset creation \"#{clearedAppName}\" for module \"#{preset.moduleName}\" to
+                ZookeeperHandler")
+    ZookeeperHandler.createNode("modules/#{preset.moduleName}/presets/#{clearedAppName}",
+      new Buffer(JSON.stringify(preset)), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
+    .then ->
+      Module.modules[preset.moduleName].updatePresetsOnGui()
+      Module.modules[preset.moduleName].createPreset(preset)
+      deferred.resolve()
+    .catch (error) ->
+      deferred.reject(error)
+    .finally ->
+      done()
     deferred.promise
 
   # removes presets from zookeeper
@@ -156,10 +183,12 @@ class ModulePreset
         clearedAppName = preset.appId.split("/")[1]
         logger.warn("Remove preset \"" + preset.appId + "\" for module \"#{preset.moduleName}\"")
         ZookeeperHandler.remove("modules/#{preset.moduleName}/presets/#{clearedAppName}")
+        .then ->
+          Module.modules[preset.moduleName].deletePreset(preset)
         .catch (error) ->
           message = "Error removing preset #{preset.appId} for  \"" + preset.moduleName + "\" \"" + error.toString() +  "\": not found"
           errors.push message
-          logger.error message
+          logger.error(message, "")
         .finally ->
           done()
       , ->
@@ -173,7 +202,7 @@ class ModulePreset
   #
   # @return [Promise] resolves with presets
   #
-  @getAll: ->
+  @getAllFromZookeeper: ->
     deferred = Q.defer()
     modules = require("../classes/Module").modules
     presets = {}
@@ -182,14 +211,24 @@ class ModulePreset
       modulenames.push(modulename)
     async.each(modulenames,
       (module, done) =>
-        @getAllOfModule(module).then (modulepresets) ->
+        @getAllOfModuleFromZookeeper(module)
+        .then (modulepresets) ->
           presets[module] = modulepresets
           done()
+        .catch (error) ->
+          logger.error(error, error.stack)
     ,
       ->
         deferred.resolve(presets)
     )
     deferred.promise
+
+  @getAll: ->
+    modules = require("../classes/Module").modules
+    presets = {}
+    for modulename, module of modules
+      presets[modulename] = module.presets
+    return Q.resolve(presets)
 
   # get all presets of a given module
   #
@@ -197,7 +236,7 @@ class ModulePreset
   #
   # @return [Promise]
   #
-  @getAllOfModule: (moduleName) ->
+  @getAllOfModuleFromZookeeper: (moduleName) ->
     deferred = Q.defer()
     ZookeeperHandler.getChildren("modules/#{moduleName}/presets")
     .then (children) ->
@@ -207,12 +246,37 @@ class ModulePreset
         .then (data) ->
           presets.push(data)
         .catch (error) ->
-          logger.error("Error \"" + error + "\"")
+          logger.error("Error \"" + error + "\"", error.stack)
         .finally ->
           done()
       , ->
         deferred.resolve(presets)
       )
+    .catch (error) ->
+      logger.error(error, error.stack)
+    deferred.promise
+
+  @getAllOfModule: (moduleName) ->
+    deferred = Q.defer()
+    unless Module.modules[moduleName]?
+      deferred.reject("module #{moduleName} not active or unknown")
+    else
+      deferred.resolve(Module.modules[moduleName].presets)
+    deferred.promise
+
+  @cachePresets: ->
+    deferred = Q.defer()
+    modules = require("./Module").modules
+    @getAllFromZookeeper()
+    .then (modulepresets) ->
+      count = 0
+      for modulename, presets of modulepresets
+        for preset in presets
+          modules[modulename].createPreset(preset)
+          count++
+      deferred.resolve(count)
+    .catch (error) ->
+      deferred.reject(error)
     deferred.promise
 
 module.exports = ModulePreset

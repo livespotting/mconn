@@ -15,6 +15,7 @@ fs = require("fs")
 Q = require("q")
 zookeeper = require("node-zookeeper-client")
 require "colors"
+_ = require("underscore")
 
 logger = require("./Logger")("Module")
 TaskData = require("./TaskData")
@@ -39,12 +40,15 @@ class Module
 
   syncInProgress: false
 
+  # presets
+  presets: null
+
   # queue of this module (initiated on init())
   queue: null
 
   # wrongwrite in child classes
   syncinterval: ->
-    return process.env.MCONN_INVENTORY_SYNC_TIME
+    return process.env.MCONN_MODULE_SYNC_TIME
 
   # active Task
   activeTask: null
@@ -55,13 +59,39 @@ class Module
     @queue = async.queue @worker.bind(@)
     @logger = require("./Logger")("Module.#{@name}")
     @router = express.Router()
+    @presets = []
     unless typeof @cleanUpInventory is "function"
-      logger.error("method 'cleanUpInventory' missing, sync process will NOT WORK", "Module.#{@name}")
+      logger.error("method 'cleanUpInventory' missing, sync process will NOT WORK", "")
     else unless process.env.MCONN_MARATHON_HOSTS
-      logger.error("\"MCONN_MARATHON_HOSTS\" environment is missing, sync process will not work")
+      logger.error("\"MCONN_MARATHON_HOSTS\" environment is missing, sync process will not work", "")
     else
-      Q.delay(@syncinterval()).then =>
+      Q.delay(@syncinterval())
+      .then =>
         @startSyncInterval()
+      .catch (error) =>
+        @logger.error(error,error.stack)
+
+  getPreset: (appId) ->
+    for index, p of @presets
+      if p.appId is appId
+        return p
+    return false #not found
+
+  editPreset: (preset) ->
+    for index, p of @presets
+      if p.appId is preset.appId
+        @presets[index] = preset
+        @logger.debug("INFO", "successfully edited preset #{preset.appId} from cache")
+
+  createPreset: (preset) ->
+    @presets.push(preset)
+    @logger.debug("INFO", "successfully added preset #{preset.appId} to cache")
+
+  deletePreset: (preset) ->
+    for index, p of @presets
+      if p.appId is preset.appId
+        @presets.splice(index, 1)
+        @logger.debug("INFO", "successfully removed preset #{preset.appId} from cache")
 
   # sync module's inventory with marathon's inventory
   #
@@ -69,14 +99,17 @@ class Module
   #
   doSync: ->
     deferred = Q.defer()
-    unless @syncInProgress
+    ZookeeperHandler = require("./ZookeeperHandler")
+    if @syncInProgress or ZookeeperHandler.isMaster isnt true
+      deferred.resolve()
+    else
       @syncInProgress = true
       @pause()
       @compareWithMarathon()
       .then (result) =>
         @cleanUpInventory(result)
       .catch (error) =>
-        @logger.error("Error on doSync(): " + error  + " " + error.stack)
+        @logger.error("Error on doSync(): " + error  + " ",error.stack)
       .finally =>
         @syncInProgress = false
         @resume()
@@ -87,14 +120,18 @@ class Module
   #
   startSyncInterval: ->
     @doSync().finally =>
-      Q.delay(@syncinterval()).then =>
+      Q.delay(@syncinterval())
+      .then =>
         @startSyncInterval()
+      .catch (error) =>
+        @logger.error(error,error.stack)
 
   # get Inventory from marathon
   #
   # @return [Promise] resolves with marathon inventory object (created from api)
   #
   getMarathonInventory: ->
+    @logger.debug("INFO", "Fetching inventory from 'http://" + process.env.MCONN_MARATHON_HOSTS + "/v2/tasks?status=running'")
     deferred = Q.defer()
     # get marathon inventory
     request = require("request")
@@ -106,13 +143,13 @@ class Module
       }
     request(options, (error, response, body) ->
       if error
-        logger.error("Error fetching inventory from marathon: " + error)
+        logger.error("Error fetching inventory from marathon: ", error)
         deferred.resolve(false)
       else
         try
           deferred.resolve(JSON.parse(body))
         catch error
-          logger.error error
+          logger.error(error,error.stack)
           deferred.resolve()
     )
     deferred.promise
@@ -159,14 +196,21 @@ class Module
   # @param [String] appId
   # @return [Promise] resolves with boolean
   #
-  presetExistsInModule: (appId) ->
+  presetExistsInModuleAndIsEnabled: (appId) ->
     deferred = Q.defer()
     ModulePreset = require("./ModulePreset")
-    ModulePreset.getAllOfModule(@name).then (presets) ->
-      moduleHasPreset = false
+    ModulePreset.getAllOfModule(@name)
+    .then (presets) ->
+      presetStatus = "not found"
       for preset in presets
-        if preset.appId is appId then moduleHasPreset = true
-      deferred.resolve(moduleHasPreset)
+        if preset.appId is appId
+          if preset.status is "enabled"
+            presetStatus = "ok"
+          else
+            presetStatus = "not enabled"
+      deferred.resolve(presetStatus)
+    .catch (error) =>
+      @logger.error(error, error.stack)
     deferred.promise
 
   # get wrong tasks, that are missing on marathon inventory, but exist on local inventory
@@ -186,13 +230,18 @@ class Module
           @logger.info "Task #{taskData.getData().taskId} does not have to be cleaned up, since it already exists in active queue"
           done()
         else
-          @presetExistsInModule(taskData.getData().appId).then (exists) =>
-            unless exists
+          @presetExistsInModuleAndIsEnabled(taskData.getData().appId)
+          .then (presetStatus) =>
+            if presetStatus is "not found"
               @logger.debug("INFO","getWrongTasks: Ignoring task #{taskData.getData().appId}, preset not found for module #{@name}")
+            else if presetStatus is "not enabled"
+              @logger.debug("INFO","getWrongTasks: Ignoring task #{taskData.getData().appId}, preset not enabled for module #{@name}")
             else
               taskData.cleanup = true
               wrong.push(taskData)
             done()
+          .catch (error) =>
+            @logger.error(error, error.stack)
       else
         done()
     , =>
@@ -217,13 +266,18 @@ class Module
           @logger.info "Task #{taskData.getData().taskId} does not have to be cleaned up, since it already exists in active queue"
           done()
         else
-          @presetExistsInModule(taskData.getData().appId).then (exists) =>
-            unless exists
-              @logger.debug("INFO","Ignoring task #{taskData.getData().appId}, preset not found for module #{@name}")
+          @presetExistsInModuleAndIsEnabled(taskData.getData().appId)
+          .then (presetStatus) =>
+            if presetStatus is "not found"
+              @logger.debug("INFO","getWrongTasks: Ignoring task #{taskData.getData().appId}, preset not found for module #{@name}")
+            else if presetStatus is "not enabled"
+              @logger.debug("INFO","getWrongTasks: Ignoring task #{taskData.getData().appId}, preset not enabled for module #{@name}")
             else
               taskData.cleanup = true
               missing.push(taskData)
             done()
+          .catch (error) =>
+            @logger.error(error,error.stack)
       else
         done()
     , =>
@@ -262,7 +316,7 @@ class Module
         missing: missingTasks
       )
     .catch (error) ->
-      logger.error("Error syncing \"" + error + error.stack + "\"")
+      logger.error("Error syncing \"" + error + "\"", error.stack)
       deferred.resolve()
     deferred.promise
 
@@ -321,6 +375,8 @@ class Module
     .then (inventory) =>
       unless socket then socket = require("../App").app.get("io").of("/#{@name}")
       socket.emit("update#{@name}Inventory", inventory)
+    .catch (error) =>
+      @logger.error error + error.stack
 
   # get Inventory of module
   #
@@ -337,7 +393,7 @@ class Module
         zookeeperHandler.getData(fullPath + "/" + inventoryItem)
         .then (data) ->
           o = {
-            path: inventoryItem
+            id: inventoryItem
             data: data
           }
           inventory.push(o)
@@ -348,34 +404,38 @@ class Module
       , ->
         deferred.resolve(inventory)
       )
+    .catch (error) =>
+      @logger.error error + error.stack
     deferred.promise
 
   # get path of template
   #
   getTemplatePath: (templatename) ->
     path = require("path")
-    return path.join(process.env.MCONN_MODULE_PATH , @folder, "templates", templatename)
+    return path.join(process.env.MCONN_MODULE_PATH, @folder, "templates", templatename)
+
+  getFullQueue: ->
+    activeQueue = []
+    QueueManager = require("./QueueManager")
+    if @activeTask and
+    @activeTask.state isnt "finished" and
+    @activeTask.state isnt "failed" and
+    @activeTask.state isnt "nopreset" and
+    taskForWebview = QueueManager.processTaskForWebview(@activeTask)
+      taskForWebview.runtime = QueueManager.getRuntime(@activeTask)
+      activeQueue.push(taskForWebview)
+    for task in @queue.tasks
+      activeQueue.push(QueueManager.processTaskForWebview(task.data))
+    return activeQueue
 
   # send module's queue to client (browser)
   #
   WS_sendQueue: ->
     @getWebsocketHandler()
     .then (io) =>
-      activeQueue = []
-      QueueManager = require("./QueueManager")
-      if @activeTask and
-      @activeTask.state isnt "finished" and
-      @activeTask.state isnt "failed" and
-      @activeTask.state isnt "nopreset" and
-      taskForWebview = QueueManager.processTaskForWebview(@activeTask)
-        taskForWebview.runtime = QueueManager.getRuntime(@activeTask)
-        activeQueue.push(taskForWebview)
-
-      for task in @queue.tasks
-        activeQueue.push(QueueManager.processTaskForWebview(task.data))
       nsp = io.of("/" + @name)
       if io then nsp.emit("update#{@name}Queue",
-        queue: activeQueue
+        queue: @getFullQueue()
         queuelength: @queue.length()
       )
     .catch (error) =>
@@ -393,7 +453,6 @@ class Module
     .catch (error) =>
       @logger.error("Error fetching presets: " + error)
       res.end()
-
 
   # init the module with everything it needs to work
   # this method should be extended like this
@@ -417,12 +476,24 @@ class Module
           cache: cache
         )
       )
-    @getWebsocketHandler().then (io) =>
+      moduleRouter.get @createModuleRoute("inventory"), (req, res) =># <- define path (will be availbale on /v1/modules/HelloWorld/custom
+        res.render(@getTemplatePath("inventory"),
+          modulename: @name # <- has to be set for gui functionality
+          activeSubmenu: "inventory" # <- has to be set for gui functionality
+          mconnenv: req.mconnenv # <- has to be defined for websocket support
+        )# <- render custom.jade template of this module and pass name as var
+
+
+    @getWebsocketHandler()
+    .then (io) =>
       if io
         nsp = io.of("/" + @name)
         nsp.on("connection", (socket) =>
           @updatePresetsOnGui(socket)
+          @updateInventoryOnGui(socket)
         )
+    .catch (error) =>
+      @logger.error error + error.stack
     # set route for queue
     if moduleRouter
       moduleRouter.get(@createModuleRoute("queue"), (req, res) =>
@@ -485,7 +556,6 @@ class Module
     dataToStore =
       customData: customData
       taskData: taskData.getData()
-
     logger.debug("INFO", "Create inventory \"" + JSON.stringify(dataToStore) + "\" on node \"#{fullPath}\"")
     zookeeperHandler = require("./ZookeeperHandler")
     return zookeeperHandler.createNode(fullPath, JSON.stringify(dataToStore))
@@ -534,21 +604,17 @@ class Module
     logger.info("Resuming queue", "Module.#{@name}.Queue")
     @queue.resume()
 
-  # main method to work with every element of the queue, main logic of the modules lies here
-  # - must be wrongwritten in child instances but must also call the super method
-  # - checks, if the task has already been finished by this module
-  # @example super(taskData,callback).then -> MODULES STUFF
-  #
-  worker: (taskData, callback) ->
+  startTaskTimeout: (taskData) ->
+    Q.delay(@timeout)
+    .then =>
+      unless taskData.state is "finished" or taskData.state is "failed" or taskData.state is "nopreset"
+        @failed(taskData, callback, "timeout on task")
+
+  checkTaskIsDone: (taskData) ->
     deferred = Q.defer()
     taskData.start = new Date().getTime()
     taskData.state = "started"
     @activeTask = taskData
-    require("./QueueManager").WS_SendAllTasks()
-    setTimeout =>
-      unless taskData.state is "finished" or taskData.state is "failed" or taskData.state is "nopreset"
-        @failed(taskData, callback, "timeout on task")
-    , @timeout
     if taskData.cleanup #there is no zookeepernode for cleanup tasks
       deferred.resolve(false)
     else
@@ -562,6 +628,44 @@ class Module
       .catch (error) =>
         @logger.error error, error.stack
     deferred.promise
+
+  # main method to work with every element of the queue, main logic of the modules lies here
+  # - must be wrongwritten in child instances but must also call the super method
+  # - checks, if the task has already been finished by this module
+  # @example super(taskData,callback).then -> MODULES STUFF
+  #
+  worker: (taskData, callback) ->
+    @logger.info("Starting worker for task " + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
+    require("./QueueManager").WS_SendAllTasks()
+    deferred = Q.defer()
+    @startTaskTimeout(taskData)
+    @checkTaskIsDone(taskData)
+    .then (taskIsDone) =>
+      if (taskIsDone)
+        @allreadyDone(taskData, callback)
+      else
+        Module.loadPresetForModule(taskData.getData().appId, @name)
+        .then (modulePreset) =>
+          unless modulePreset
+            @noPreset(taskData, callback, "Preset could not be found for app #{taskData.getData().appId}")
+          else unless modulePreset.status is "enabled"
+            @noPreset(taskData, callback, "Preset is not enabled for app #{taskData.getData().appId}")
+          else
+            @doWork(taskData, modulePreset, callback)
+        .catch (error) =>
+          @logger.error("Error starting worker for #{@name} Module: " + error.toString(),  error.stack)
+          @failed(taskData, callback)
+    .catch (error) =>
+      @logger.error(error, error.stack)
+    deferred.promise
+
+  doWork: (taskData, modulePreset, callback) ->
+    @logger.debug("INFO", "Processing task")
+    switch taskData.getData().taskStatus
+      when "TASK_RUNNING" then @on_TASK_RUNNING(taskData, modulePreset, callback)
+      when "TASK_FAILED" then @on_TASK_FAILED(taskData, modulePreset, callback)
+      when "TASK_FINISHED" then @on_TASK_FINISHED(taskData, modulePreset, callback)
+      when "TASK_KILLED" then @on_TASK_KILLED(taskData, modulePreset, callback)
 
   # finish task
   #
@@ -581,13 +685,12 @@ class Module
       else
         Module.zookeeperHandler().setData("modules/#{@name}/queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus, {state: state})
         .then =>
-          message = "Task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" state changed to #{state}! Task Queue is now \"" + @queue.length() + "\""
+          message = "Task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" state changed to #{state}! Task Queue is now \"" + @queue.length() +  "\""
           if reason then message += " Reason: #{reason}"
-          logger.info("Task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" state changed to #{state}! Task Queue is now \"" + @queue.length() +
-            "\"", "Module.#{@name}")
+          logger.info message, "Module.#{@name}"
         .catch (error) =>
           logger.error("Could not change the task-state of \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" to #{state}",
-            "Module.#{@name} \"" + error.toString() + "\"")
+            "Module.#{@name} \"" + error.toString() + "\"", error.stack)
         .finally ->
           require("./QueueManager").WS_SendAllTasks()
           callback()
@@ -663,13 +766,12 @@ class Module
   @compileCoffeescript: (modulename, folder) ->
 
     #todo, skip this, if MCONN_MODULE_PREPARE is false
-
     deferred = Q.defer()
     path = require("path")
     exec = require('child_process').exec
     exec("coffee -c " + path.join(process.env.MCONN_MODULE_PATH , folder), (error, stdout, stderr) ->
       if error
-        logger.error("Error installing dependencies for module \"#{modulename}\", \"" + error + "\"")
+        logger.error("Error installing dependencies for module \"#{modulename}\", \"" + error + "\"", error.stack)
       else
         logger.info("Successfully installed dependencies for module \"#{modulename}\"")
       deferred.resolve()
@@ -698,7 +800,7 @@ class Module
     exec = require('child_process').exec
     exec("cd " + path.join(process.env.MCONN_MODULE_PATH , folder) + " && npm install", (error, stdout, stderr) ->
       if error
-        logger.error("Error compiling coffee for module \"#{modulename}\", " + error + "\"")
+        logger.error("Error compiling coffee for module \"#{modulename}\", " + error + "\"", error.stack)
       else
         logger.info("Successfully compiled coffee for module \"#{modulename}\"")
       deferred.resolve()
@@ -736,7 +838,7 @@ class Module
                   Module = require(path.join(process.env.MCONN_MODULE_PATH , folder))
                   config = require(path.join(process.env.MCONN_MODULE_PATH , folder + "/config.json"))
                   unless config?
-                    logger.error("Error reading config for \"#{module}\", path \"" + path.join(process.env.MCONN_MODULE_PATH , folder + "/config.json\""))
+                    logger.error("Error reading config for \"#{module}\", path \"" + path.join(process.env.MCONN_MODULE_PATH , folder + "/config.json\""), "")
                     done()
                   else
                     logger.debug("INFO","trying to init module #{moduleNameInPackageJson}")
@@ -745,14 +847,14 @@ class Module
                     .then ->
                       logger.info("Module \"" + moduleNameInPackageJson + "\" successfully initiated from folder \"#{folder}\"")
                     .catch (error) ->
-                      logger.error("Module \"" + moduleNameInPackageJson + "\" could not be initiated \"" + error + "\"")
+                      logger.error("Module \"" + moduleNameInPackageJson + "\" could not be initiated \"" + error + "\"", error.stack)
                     .finally ->
                       done()
                 .catch (error) ->
                   logger.error error, error.stack
                   done()
               else
-                logger.error("package.json is missing in folder #{folder}, module could not be detected")
+                logger.error("package.json is missing in folder #{folder}, module could not be detected", "")
                 done()
         unless found
           logger.debug("INFO", "Folder \"" + folder + "\" is present, but is no module or not activated by environment variable \"MCONN_MODULE_START\"")
@@ -765,10 +867,11 @@ class Module
     catch error
       logger.error error, error.stack
       deferred.resolve()
-
-    deferred.promise.then =>
+    deferred.promise
+    .then =>
       @allModulesLoadedDeferred.resolve()
-
+    .catch (error) =>
+      @logger.error error, error.stack
     deferred.promise
 
   # load the preset from zookeeper for this application
@@ -784,13 +887,14 @@ class Module
         .then (config) ->
           deferred.resolve(config)
         .catch (error) ->
-          logger.error "Error fetching app for \"" + clearedAppId + "\" for module \"" + moduleName + "\" \"" +  error + "\""
+          logger.error "Error fetching app for \"" + clearedAppId + "\" for module \"" + moduleName + "\" \"" +  error + "\"", error.stack
           deferred.resolve(false)
       else
         logger.debug "WARN", "Could not find preset for app \"" + clearedAppId + "\" for module \"" + moduleName + "\""
         deferred.resolve(false)
     .catch (error) ->
-      logger.error "Error occured loading preset for app \"" + clearedAppId + "\" for module \"" + moduleName + "\" \"" +  error + "\""
+      logger.error "Error occured loading preset for app \"" + clearedAppId + "\" for module \"" + moduleName + "\" \"" +  error + "\"", error.stack
       deferred.resolve(false)
     return deferred.promise
+
 module.exports = Module

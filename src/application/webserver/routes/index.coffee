@@ -75,7 +75,8 @@ router.get "/v1/ping", (req, res) ->
 # POST /v1/exit/leader -> Kill the leading master
 router.post "/v1/exit/leader", (req, res) ->
   ZookeeperHandler = require("../../classes/ZookeeperHandler")
-  ZookeeperHandler.getMasterData().then (masterdata) ->
+  ZookeeperHandler.getMasterData()
+  .then (masterdata) ->
     request = require("request")
     request.post(masterdata.serverdata.serverurl + "/v1/exit/node")
     res.end()
@@ -120,6 +121,15 @@ router.post "/v1/module/queue/resume/:modulename", (req, res) ->
     res.statusCode = 500
   res.end()
 
+# POST /v1/module/queue/resume/{moduleName} - resume queue of selected module
+router.get "/v1/module/queue/list/:modulename", (req, res) ->
+  modules = require("../../classes/Module").modules
+  if modules[req.params.modulename]?
+    res.json(modules[req.params.modulename].getFullQueue())
+  else
+    res.statusCode = 500
+  res.end()
+
 # GET /v1/module/preset - get all presets
 router.get "/v1/module/preset", (req, res) ->
   ModulePreset = require("../../classes/ModulePreset")
@@ -127,7 +137,7 @@ router.get "/v1/module/preset", (req, res) ->
   .then (presets) ->
     res.json(presets)
   .catch (error) ->
-    logger.error("GET on /preset " + error.toString(), "router.get preset")
+    logger.error("GET on /preset " + error.toString(), "router.get preset", error.stack)
     res.statusCode = 500
   .finally ->
     res.end()
@@ -139,10 +149,27 @@ router.get "/v1/module/preset/:modulename", (req, res) ->
   .then (presets) ->
     res.json(presets)
   .catch (error) ->
-    logger.error("GET on /preset " + error.toString(), "router.get preset")
+    logger.error("GET on /preset " + error.toString(), "router.get preset", error.stack)
     res.statusCode = 500
   .finally ->
     res.end()
+
+# GET /v1/module/preset/{moduleName} - all presets of selected module
+router.get "/v1/module/inventory/:modulename", (req, res) ->
+  modules = require("../../classes/Module").modules
+  if req.params.modulename? isnt true or modules[req.params.modulename]? isnt true
+    res.json(
+      error: "Module " + req.params.modulename + " unkown or not active"
+    )
+  else
+    module = modules[req.params.modulename]
+    module.getInventory()
+    .then (inventory) ->
+      res.json(inventory)
+    .catch (error) ->
+      res.json(
+        error: error
+      )
 
 # POST /v1/module/preset - post a new preset to presetstore
 router.post "/v1/module/preset", (req, res) ->
@@ -213,7 +240,7 @@ router.delete "/v1/module/preset", (req, res) ->
     res.send(result: result)
   .catch (error) ->
     res.statusCode = 500
-    logger.error("DELETE on /preset: " + error, "router.delete /preset")
+    logger.error("DELETE on /preset: " + error, "router.delete /preset", error.stack)
   .finally ->
     res.end()
 

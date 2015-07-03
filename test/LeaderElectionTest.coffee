@@ -82,7 +82,7 @@ describe "Leader Election Tests", ->
     .delay(10000)
     .then -> done()
 
-  describe "check first startup election", ->
+  describe "check election on startup", ->
     it "should return the same result for all three nodes", (done) ->
       this.timeout(5000)
       body1 = null
@@ -98,7 +98,7 @@ describe "Leader Election Tests", ->
               expect(body1.leader).equal(body2.leader)
               expect(body1.leader).equal(body3.leader)
 
-  describe "check follower to leader election", ->
+  describe "check election of another leader, if leader has died", ->
     leaderBefore = null
     leaderAfter1 = null
     leaderAfter2 = null

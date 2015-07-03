@@ -22,6 +22,11 @@ Module = require("./classes/Module")
 class App
   # environment variables for the application
   @env_vars: [
+    name: "MCONN_LOGGER_LEVEL"
+    required: false
+    default: if process.env.NODE_ENV is "development" then 4 else 3
+    description: "Logging Level: 1 - Errors | 2 - Errors, Warning | 3 - Errors, Warning, Info | 4 - Errors, Warning, Info, Debug"
+  ,
     name: "MCONN_HOST"
     required: false
     default: if process.env.HOST then process.env.HOST else "127.0.0.1"
@@ -42,25 +47,25 @@ class App
     default: 60000
     description: "Timout until a job has to be finished"
   ,
-    name: "MCONN_INVENTORY_SYNC_TIME"
-    required: false
-    default: 600000
-    description: "Global time to start Marathon-Sync"
-  ,
     name: "MCONN_MODULE_PATH"
     required: false
     default: if process.env.MESOS_SANDBOX then process.env.MESOS_SANDBOX else "/application/modules"
     description: "Path of the modules to be loaded"
+  ,
+    name: "MCONN_MODULE_PREPARE"
+    required: false
+    default: "true"
+    description: "run npm install in the modules folder before start it"
   ,
     name: "MCONN_MODULE_START"
     required: false
     default: ""
     description: "List of activated modules"
   ,
-    name: "MCONN_MODULE_PREPARE"
+    name: "MCONN_MODULE_SYNC_TIME"
     required: false
-    default: "true"
-    description: "run npm install in the modules folder before start it"
+    default: 600000
+    description: "Global time to start Marathon-Sync"
   ,
     name: "MCONN_ZK_HOSTS"
     required: false
@@ -113,13 +118,13 @@ class App
         if process.env[e.name]?
           logger.info("ENV \"#{e.name}=" + process.env[e.name] + "\", #{e.description}")
         else if e.required
-          logger.error ("No value set for env #{e.name}, but it is required!").red.bold
+          logger.error("No value set for env #{e.name}, but it is required!","")
           killProcess = true
         else
           process.env[e.name] = e.default
           logger.info("ENV \"#{e.name}=#{e.default}\", default value, #{e.description}")
       if killProcess
-        logger.error ("MConn stops because required env-vars are not set").red.bold
+        logger.error("MConn stops because required env-vars are not set","")
         process.kill()
       return
 
@@ -160,6 +165,7 @@ class App
     app.use Middlewares.expressLogger
     app.use Middlewares.appendMasterDataToRequest
     app.post /v1/, Middlewares.route
+    app.get /v1/, Middlewares.route
     app.get "/v1/queue", Middlewares.route
     app.post "/v1/queue", Middlewares.checkRequestIsValid
     app.post "/v1/queue", Middlewares.sendRequestToQueue
@@ -179,7 +185,6 @@ class App
       config = require("./webserver/config/config")
       compression = require("compression")
       oneYear = 31536000
-      @app.locals.mconnenv2 = "ladida"
       @app.locals.jsfiles = config.getJavascriptFiles()
       @app.locals.cssfiles = config.getCssFiles()
       @app.locals.basedir = path.join(__dirname, "webserver/views")
@@ -212,7 +217,7 @@ class App
       # no stacktraces leaked to user
       @app.use (err, req, res, next) ->
         res.status err.status or 500
-        logger.error(err + ": " + req.url)
+        logger.error(err +  ": " + req.url,err.stack)
         res.send("{\"message\":\"URI not found: " + req.url + "\"}")
         res.end()
 
@@ -225,6 +230,6 @@ class App
       logger.info("Webserver started on \"" + process.env.MCONN_HOST + ":" + port + "\"")
       logger.info("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
     catch error
-      logger.error error
+      logger.error(error,error.stack)
 
 module.exports = App

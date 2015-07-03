@@ -11,8 +11,15 @@
 
 App = require("./App")
 require("./webserver/config/config")
-
+logger = require("./classes/Logger")("Startprocess")
 QueueManager = require("./classes/QueueManager")
 
-App.checkEnvironment().then ->
+App.checkEnvironment()
+.then ->
   App.initZookeeper()
+.then ->
+  App.initModules()
+.then ->
+  App.startWebserver()
+.catch (error) ->
+  logger.error(error,error.stack)

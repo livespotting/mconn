@@ -38,7 +38,7 @@ class QueueManager
         @activeTask.stop = new Date().getTime()
         @activeTask.state = "All modules finished"
     .catch (error) ->
-      logger.error(error.toString())
+      logger.error(error.toString(), error.stack)
     .finally ->
       callback()
 
@@ -61,9 +61,7 @@ class QueueManager
       promise = @zookeeperHandler().createNode("queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus,
         new Buffer(JSON.stringify(taskData.getData()))
       , zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
-
     copiedTaskDataForModules = {}
-
     promise.then =>
       for name, m of Module.modules
         do (name, m) ->
@@ -79,7 +77,6 @@ class QueueManager
             logger.debug("INFO","Resolving promise of task " + taskData.getData().taskId + "_" + taskData.getData().taskStatus + " for task #{name}")
             deferred.resolve()
           )
-
       # add task to main queue
       @queue.push(
         task: taskData
@@ -90,23 +87,22 @@ class QueueManager
         @zookeeperHandler().remove("queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
         .then  =>
           logger.debug("INFO", taskData.getData().taskId + " finished, cleaning up")
-
           for name, m of Module.modules
             do (name) =>
               @zookeeperHandler().remove("modules/#{name}/queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
               .then ->
                 logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue")
               .catch (error) ->
-                logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue \"" + error.toString() + "\"")
+                logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue \"" + error.toString() + "\"", error.stack)
               .finally =>
                 @WS_SendAllTasks()
           logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue. Now \"#{@queue.length()}\" tasks in queue")
         .catch (error) ->
-          logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue \"" + error.toString + "\"")
+          logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue \"" + error.toString + "\"", error.stack)
       )
       @WS_SendAllTasks()
     .catch (error) ->
-      logger.error("Could not save task \"{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" on \"modules/#{name}/queue/\", \"" + error.toString() + "\"")
+      logger.error("Could not save task \"{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" on \"modules/#{name}/queue/\", \"" + error.toString() + "\"", error.stack)
       deferred.resolve()
 
   # send all tasks to gui
@@ -147,7 +143,6 @@ class QueueManager
   # @return [Object] task processed for gui
   #
   @processTaskForWebview: (taskData, copiedTaskDataForModules) ->
-
     if taskData instanceof TaskData
       task = {}
       task.id = taskData.getData().taskId + "_" + taskData.getData().taskStatus

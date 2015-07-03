@@ -7,10 +7,12 @@ This is a pre-release! We can't guarantee that something you build today will wo
  * [GET /v1/queue](#get-v1queue)
  * [POST /v1/queue](#post-v1queue)
 * [Modules](#modules)
+ * [GET /v1/module/inventory/{moduleId}](#get-v1moduleinventorymoduleid)
  * [GET /v1/module/list](#get-v1modulelist)
  * [GET /v1/module/list/{moduleId}](#get-v1modulelistmoduleid)
- * [POST /v1/module/jobqueue/pause/{moduleId}](#post-v1modulejobqueuepausemoduleid)
- * [POST /v1/module/jobqueue/resume/{moduleId}](#post-v1modulejobqueueresumemoduleid)
+ * [GET /v1/module/queue/list/{moduleId}](#get-v1modulequeuelistmoduleid)
+ * [POST /v1/module/queue/pause/{moduleId}](#post-v1modulequeuepausemoduleid)
+ * [POST /v1/module/queue/resume/{moduleId}](#post-v1modulequeueresumemoduleid)
  * [GET /v1/module/preset](#get-v1modulepreset)
  * [GET /v1/module/preset/{moduleId}](#get-v1modulepresetmoduleid)
  * [POST /v1/module/preset](#post-v1modulepreset)
@@ -95,6 +97,37 @@ ok
 
 ## Modules
 
+### GET /v1/module/inventory/{moduleId}
+
+Request:
+```sh
+GET /v1/module/inventory/HelloWorld HTTP/1.1
+Accept: */*
+```
+
+Response:
+```json
+[
+    {
+        "id": "bridged-webapp.28aa2a14-2157-11e5-9e08-56847afe9799",
+        "data": {
+            "customData": "Moin, Moin",
+            "taskData": {
+                "taskId": "bridged-webapp.28aa2a14-2157-11e5-9e08-56847afe9799",
+                "taskStatus": "TASK_RUNNING",
+                "appId": "/bridged-webapp",
+                "host": "ac1.kiel",
+                "ports": [
+                    31002,
+                    31003
+                ],
+                "timestamp": 1435909578085
+            }
+        }
+    }
+]
+```
+
 ### GET /v1/module/list
 
 Request:
@@ -109,20 +142,63 @@ Response:
     "HelloWorld": {
         "name": "HelloWorld",
         "queue": {
-            "tasks": [],
+            "tasks": [
+                {
+                    "data": {
+                        "activeModules": [],
+                        "taskId": "dev-app-1.5339b3ed-2157-11e5-9e08-56847afe9799",
+                        "taskStatus": "TASK_KILLED",
+                        "appId": "/dev-app-1",
+                        "host": "ac3.kiel",
+                        "ports": [
+                            31023
+                        ],
+                        "timestamp": 1435909542992,
+                        "cleanup": true,
+                        "state": "idle"
+                    }
+                }
+            ],
             "concurrency": 1,
-            "saturated": null,
-            "empty": null,
-            "drain": null,
-            "started": false,
+            "payload": 1,
+            "started": true,
             "paused": false
         },
         "logger": {
-            "context": "MconnModule.HelloWorld"
+            "context": "Module.HelloWorld"
         },
-        "folder": "mconn-helloworld-master",
+        "presets": [
+            {
+                "appId": "/bridged-webapp",
+                "moduleName": "HelloWorld",
+                "status": "enabled",
+                "options": {
+                    "actions": {
+                        "add": "Moin, Moin",
+                        "remove": "Tschues"
+                    }
+                },
+                "lastEdit": false
+            }
+        ],
+        "folder": "HelloWorld",
         "options": {},
-        "timeout": 60000
+        "timeout": 60000,
+        "syncInProgress": false,
+        "activeTask": {
+            "activeModules": [],
+            "taskId": "dev-app-1.5338c989-2157-11e5-9e08-56847afe9799",
+            "taskStatus": "TASK_KILLED",
+            "appId": "/dev-app-1",
+            "host": "ac3.kiel",
+            "ports": [
+                31019
+            ],
+            "timestamp": 1435909558026,
+            "cleanup": true,
+            "state": "started",
+            "start": 1435914049725
+        }
     }
 }
 ```
@@ -138,32 +214,102 @@ Accept: */*
 Response:
 ```json
 {
-    "HelloWorld": {
-        "name": "HelloWorld",
-        "queue": {
-            "tasks": [],
-            "concurrency": 1,
-            "saturated": null,
-            "empty": null,
-            "drain": null,
-            "started": false,
-            "paused": false
+    "name": "HelloWorld",
+    "queue": {
+        "tasks": [],
+        "concurrency": 1,
+        "payload": 1,
+        "started": true,
+        "paused": false
+    },
+    "logger": {
+        "context": "Module.HelloWorld"
+    },
+    "presets": [
+        {
+            "appId": "/bridged-webapp",
+            "moduleName": "HelloWorld",
+            "status": "enabled",
+            "options": {
+                "actions": {
+                    "add": "Moin, Moin",
+                    "remove": "Tschues"
+                }
+            },
+            "lastEdit": false
         },
-        "logger": {
-            "context": "MconnModule.HelloWorld"
-        },
-        "folder": "mconn-helloworld-master",
-        "options": {},
-        "timeout": 60000
+        {
+            "appId": "/dev-app-1",
+            "moduleName": "HelloWorld",
+            "status": "enabled",
+            "options": {
+                "actions": {
+                    "add": "Moin, Moin",
+                    "remove": "Tschues"
+                }
+            },
+            "lastEdit": false
+        }
+    ],
+    "folder": "HelloWorld",
+    "options": {},
+    "timeout": 60000,
+    "syncInProgress": false,
+    "activeTask": {
+        "activeModules": [],
+        "taskId": "dev-app-1.cdafe843-2161-11e5-9e08-56847afe9799",
+        "taskStatus": "TASK_RUNNING",
+        "appId": "/dev-app-1",
+        "host": "ac3.kiel",
+        "ports": [
+            31004
+        ],
+        "cleanup": true,
+        "state": "finished",
+        "start": 1435914144910,
+        "timestamp": 1435914149916,
+        "stop": 1435914149920
     }
 }
 ```
 
-### POST /v1/module/jobqueue/pause/{moduleId}
+### GET /v1/module/queue/list/{moduleId}
 
 Request:
 ```sh
-POST /v1/module/jobqueue/pause/HelloWorld HTTP/1.1
+GET /v1/module/queue/list/HelloWorld HTTP/1.1
+Accept: */*
+```
+
+Response:
+```json
+[
+    {
+        "id": "bridged-webapp.2a7414a6-2157-11e5-9e08-56847afe9799_TASK_KILLED",
+        "data": {
+            "taskId": "bridged-webapp.2a7414a6-2157-11e5-9e08-56847afe9799",
+            "taskStatus": "TASK_KILLED",
+            "appId": "/bridged-webapp",
+            "host": "ac2.kiel",
+            "ports": [
+                31614,
+                31615
+            ],
+            "timestamp": 1435909588111
+        },
+        "cleanup": true,
+        "moduleState": [],
+        "runtime": 0.8,
+        "state": "started"
+    }
+]
+```
+
+### POST /v1/module/queue/pause/{moduleId}
+
+Request:
+```sh
+POST /v1/module/queue/pause/HelloWorld HTTP/1.1
 Accept: */*
 ```
 
@@ -190,11 +336,11 @@ Response:
 }
 ```
 
-### POST /v1/module/jobqueue/resume/{moduleId}
+### POST /v1/module/queue/resume/{moduleId}
 
 Request:
 ```sh
-POST /v1/module/jobqueue/resume/HelloWorld HTTP/1.1
+POST /v1/module/queue/resume/HelloWorld HTTP/1.1
 Accept: */*
 ```
 
@@ -386,13 +532,14 @@ Response:
 {
     "leader": "slave3.dev:31999",
     "env": {
+        "MCONN_LOGGER_LEVEL": "3",
         "MCONN_HOST": "slave1.dev",
         "MCONN_PORT": "31999",
         "MCONN_PATH": "/application",
-        "MCONN_QUEUE_TIMEOUT": "10000",
+        "MCONN_QUEUE_TIMEOUT": "60000",
         "MCONN_MODULE_PATH": "/mnt/mesos/sandbox",
         "MCONN_MODULE_PREPARE": "true",
-        "MCONN_MODULE_START": "mconn-helloworld-master",
+        "MCONN_MODULE_START": "HelloWorld",
         "MCONN_MODULE_SYNC_TIME": "600000",
         "MCONN_ZK_HOSTS": "leader.mesos:2181",
         "MCONN_ZK_PATH": "/mconn",

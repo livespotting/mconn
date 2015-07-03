@@ -16,7 +16,6 @@ html(ng-app="app")
         .hidden.master-url(data-masterurl="#{mconnenv.masterdata.serverdata.serverurl}")
         .hidden.modulename(data-modulename="#{modulename}")
         div.container(ng-view)
-
         script(src='#{mconnenv.masterdata.serverdata.serverurl}/socket.io/socket.io.js')
         each file in jsfiles
             script(src='/#{file}')

@@ -1,4 +1,4 @@
-FROM node:0.12.4
+FROM node:0.12.5
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 

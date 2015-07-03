@@ -28,6 +28,9 @@ this.app.controller 'tasksController', [
       $rootScope.socket.on 'removeActiveTask', ->
         $scope.activeTask = null
       return
+
+    $scope.duration = (timestamp) ->
+      return moment().diff(moment(timestamp), "s") + " Sec."
 ]
 
 this.app.controller 'NavCtrl', ($scope, $location) ->
