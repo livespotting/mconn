@@ -116,7 +116,7 @@ Response:
                 "taskId": "bridged-webapp.28aa2a14-2157-11e5-9e08-56847afe9799",
                 "taskStatus": "TASK_RUNNING",
                 "appId": "/bridged-webapp",
-                "host": "ac1.kiel",
+                "host": "slave1.dev",
                 "ports": [
                     31002,
                     31003
@@ -146,10 +146,10 @@ Response:
                 {
                     "data": {
                         "activeModules": [],
-                        "taskId": "dev-app-1.5339b3ed-2157-11e5-9e08-56847afe9799",
+                        "taskId": "bridged-webapp.28aa2a14-2157-11e5-9e08-56847afe9799",
                         "taskStatus": "TASK_KILLED",
-                        "appId": "/dev-app-1",
-                        "host": "ac3.kiel",
+                        "appId": "/bridged-webapp",
+                        "host": "slave1.dev",
                         "ports": [
                             31023
                         ],
@@ -187,10 +187,10 @@ Response:
         "syncInProgress": false,
         "activeTask": {
             "activeModules": [],
-            "taskId": "dev-app-1.5338c989-2157-11e5-9e08-56847afe9799",
+            "taskId": "bridged-webapp.67bb4g14-2157-11e5-9e08-56847afe9799",
             "taskStatus": "TASK_KILLED",
-            "appId": "/dev-app-1",
-            "host": "ac3.kiel",
+            "appId": "/bridged-webapp",
+            "host": "slave1.dev",
             "ports": [
                 31019
             ],
@@ -237,18 +237,6 @@ Response:
                 }
             },
             "lastEdit": false
-        },
-        {
-            "appId": "/dev-app-1",
-            "moduleName": "HelloWorld",
-            "status": "enabled",
-            "options": {
-                "actions": {
-                    "add": "Moin, Moin",
-                    "remove": "Tschues"
-                }
-            },
-            "lastEdit": false
         }
     ],
     "folder": "HelloWorld",
@@ -257,10 +245,10 @@ Response:
     "syncInProgress": false,
     "activeTask": {
         "activeModules": [],
-        "taskId": "dev-app-1.cdafe843-2161-11e5-9e08-56847afe9799",
+        "taskId": "bridged-webapp.28aa2a14-2157-11e5-9e08-56847afe9799",
         "taskStatus": "TASK_RUNNING",
-        "appId": "/dev-app-1",
-        "host": "ac3.kiel",
+        "appId": "/bridged-webapp",
+        "host": "slave1.dev",
         "ports": [
             31004
         ],
@@ -290,7 +278,7 @@ Response:
             "taskId": "bridged-webapp.2a7414a6-2157-11e5-9e08-56847afe9799",
             "taskStatus": "TASK_KILLED",
             "appId": "/bridged-webapp",
-            "host": "ac2.kiel",
+            "host": "slave1.dev",
             "ports": [
                 31614,
                 31615
