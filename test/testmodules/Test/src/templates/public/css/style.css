@@ -1,0 +1,12 @@
+.btn-module {
+  background-color: #3b3d40;
+  border-color: #3b3d40;
+  border-width: 2px;
+  color: #fff;
+}
+.btn-module:hover, .btn-module:active, .btn-module:visited, .btn-module:link, .btn-module:focus {
+  background-color: #3b3d40;
+  border-color: #00c698;
+  border-width: 2px;
+  color: #fff;
+}

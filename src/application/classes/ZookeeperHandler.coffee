@@ -40,6 +40,10 @@ class ZookeeperHandler
   # name of this server
   @servername: null
 
+  @connectionTimeout = 10000
+
+  @leaderElectionFinishedOnceDeferred = Q.defer() #promise that the leader election has been finished once
+
   # connect client to zookeeper server
   #
   # @return [Promise]
@@ -48,7 +52,7 @@ class ZookeeperHandler
     logger.debug("INFO", "Connect to \"" + process.env.MCONN_ZK_HOSTS + "\"")
     deferred = Q.defer()
     @client.connect()
-    Q.delay(10000).then =>
+    Q.delay(@connectionTimeout).then =>
       if @client.state.name is "DISCONNECTED"
         message = "Zookeeper is unreachable \"" + process.env.MCONN_ZK_HOSTS + "\""
         logger.error(message, "")
@@ -71,7 +75,7 @@ class ZookeeperHandler
         return Q.resolve()
       else
         logger.info("Create node \"#{path}\"")
-        return @createNode(path,new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
+        return @createNode(path, new Buffer(""), zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
     .then ->
       deferred.resolve()
     .catch (error) ->
@@ -95,7 +99,6 @@ class ZookeeperHandler
         deferred.reject(error)
       else
         deferred.resolve(stat)
-
     deferred.promise
 
   # get data from zookeeper node
@@ -152,7 +155,6 @@ class ZookeeperHandler
     catch error
       logger.error(error, error.stack)
       deferred.reject(error)
-
     return deferred.promise
 
   # create base structure
@@ -205,8 +207,8 @@ class ZookeeperHandler
     try
       @client.remove self.namespace() + "/" + path, (error) ->
         if error
-          logger.error(error, error.stack)
-          deferred.reject(error)
+          logger.error("Error removing\"#{path}\":" + error, error.stack)
+          deferred.reject("Error removing\"#{path}\":" + error)
         else
           deferred.resolve(true)
     catch error
@@ -227,18 +229,21 @@ class ZookeeperHandler
         unless @isMaster
           @isMaster = true
           logger.info("This node is the new leading master")
-          @recoverTasks()
+          Module.allModulesLoadedDeferred.promise
           .then ->
             ModulePreset.cachePresets()
-          .then (count) ->
-            logger.info("Cached #{count} presets")
+          .then (count) =>
+            logger.info("Cached \"#{count}\" presets")
             modules = Module.modules
+            @leaderElectionFinishedOnceDeferred.resolve()
             for name, module of modules
               module.doSync()
         else
           logger.info("Leading master is still \"localhost\"")
+          @leaderElectionFinishedOnceDeferred.resolve()
       else
         logger.info("Leading master is not \"localhost\"")
+        @leaderElectionFinishedOnceDeferred.resolve()
       @cacheMasterData()
     .catch (error) ->
       logger.error(error, error.stack)
@@ -311,39 +316,6 @@ class ZookeeperHandler
         deferred.resolve(children)
     deferred.promise
 
-  # recover tasks from zookeeper
-  #
-  # @return [Promise]
-  #
-  @recoverTasks: =>
-    logger.debug("INFO", "Initiate recovering of tasks")
-    deferred = Q.defer()
-    QueueManager = require("./QueueManager")
-    TaskData = require("./TaskData")
-    Module = require("./Module")
-    logger.debug("INFO", "wait for all modules to be loaded")
-    Module.allModulesLoadedDeferred.promise
-    .then =>
-      logger.debug("INFO", "Start recovering tasks")
-      @client.getChildren @namespace() + "/queue", (error, children, stat) =>
-        logger.info("Recovering \"#{children.length}\" tasks")
-        if children.length is 0 then deferred.resolve()
-        async.each(children, (c, callback) =>
-          @getData("queue/" + c)
-          .then (data) ->
-            logger.info("Recovering unfinished task \"#{c}\"")
-            QueueManager.add(TaskData.load(data), recovery = true)
-            callback()
-          .catch (error) ->
-            logger.error("Error on leading master processes \"" + error + "\"", error.stack)
-          (result) ->
-            logger.info("\"#{children.length}\" prior tasks recovered")
-            deferred.resolve()
-        )
-    .catch (error) ->
-      logger.error(error + error.stack)
-    deferred.promise
-
   # handler on zookeeper authentication failure, exit the application since it cannot work without zookeeper connection
   #
   @authenticationFailedHandler: ->
@@ -409,7 +381,8 @@ class ZookeeperHandler
     #ip and port from where the docker-container or application is reachable FROM OUTSIDE
     @serverdata.ip = process.env.MCONN_HOST
     @serverdata.port = process.env.MCONN_PORT
-    @serverdata.serverurl = "http://" + @serverdata.ip + ":" + @serverdata.port
+    protocol = "http://"
+    @serverdata.serverurl = protocol + @serverdata.ip + ":" + @serverdata.port
     @servername = @serverdata.ip + "-" + @serverdata.port + "-" + require("os").hostname()
     transaction = @client.transaction()
     transaction.create(@namespace() + "/leader/member_", new Buffer(JSON.stringify({@serverdata})), zookeeper.ACL.OPEN, zookeeper.CreateMode.EPHEMERAL_SEQUENTIAL)
@@ -421,7 +394,7 @@ class ZookeeperHandler
         unless results[0]?.path? and results[0].path.split("_")[1]? then logger.error("error on member-registration: could not fetch created memberid")
         else
           @memberId = results[0].path.split("_")[1]
-          logger.info("new member generated with id \"#{@memberId}\"")
+          logger.info("New member generated with id \"#{@memberId}\"")
           @client.emit "member_registered"
         deferred.resolve()
     deferred.promise

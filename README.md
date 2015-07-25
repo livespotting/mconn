@@ -29,7 +29,8 @@ One of our targets has been a framework design that provides numerous custom pos
 
 ## For Developers
 
-MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitate to fork and customize it! We will release the required documentations with the upcoming version 0.1.0.
+MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitate to fork and customize it! 
+The first documentation for configuring Mconn is available [here](docs/README.md).
 
 ## Demo-Deployment
 
@@ -43,7 +44,7 @@ MConn is for free and based on the [Apache v2-License](LICENSE). Don’t hesitat
 
 You have to assure that Mesos-DNS and each hostname can also be reached by Mesos-Slaves.
 
-##### MConn's default enviroments for a fast deployment (inspired by DCOS) are:
+##### MConn's default [enviroments](docs/enviroments.md) for a fast deployment (inspired by DCOS) are:
 
 | Environment | Variable |
 |------------|-----------|
@@ -58,11 +59,12 @@ You can modify this with the following Marathon-Config:
 
 ```json
 "env": {
-    "MCONN_MARATHON_HOSTS": "admin:password@leader.mesos:8080",
+    "MCONN_MARATHON_HOSTS": "admin:password@10.11.12.13:8080,admin:password@10.11.12.14:8080",
+    "MCONN_MARATHON_SSL": "true",
     "MCONN_ZK_HOSTS": "10.11.12.13:2181,10.11.12.14:2181,10.11.12.15:2181"
 }
 ```
-*Notice: MConn currently supports just one Marathon-Address*
+More informations about the MConn-Enviroments, see the [docs](docs/enviroments.md).
 
 ##### Deployment scheme:
 
@@ -79,7 +81,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     "container": {
         "type": "DOCKER",
         "docker": {
-            "image": "livespotting/mconn:0.0.9",
+            "image": "livespotting/mconn:0.0.10",
             "network": "HOST"
         },
         "volumes": []
@@ -182,6 +184,26 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
 }'
 ```
 [![MConn UI DemoApp](docs/img/readme-ui-3.png)](https://github.com/datarhei/mconn)
+
+Or see STDOUT on Mesos-Slave Sandbox:
+```sh
+[25-07-2015 22:24:44] [INFO] Task "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[25-07-2015 22:24:44] [INFO] Task "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[25-07-2015 22:24:44] [INFO] Starting worker for task "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[25-07-2015 22:24:45] [INFO] Task "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[25-07-2015 22:24:45] [INFO] Task "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[25-07-2015 22:24:45] [INFO] Moin, Moin "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[25-07-2015 22:24:45] [INFO] Task "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "3" (Module.HelloWorld)
+[25-07-2015 22:24:45] [INFO] Starting worker for task "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[25-07-2015 22:24:47] [INFO] Moin, Moin "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[25-07-2015 22:24:47] [INFO] Task "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "2" (Module.HelloWorld)
+[25-07-2015 22:24:47] [INFO] Starting worker for task "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[25-07-2015 22:24:48] [INFO] Moin, Moin "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[25-07-2015 22:24:48] [INFO] Task "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "1" (Module.HelloWorld)
+[25-07-2015 22:24:48] [INFO] Starting worker for task "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[25-07-2015 22:24:49] [INFO] Moin, Moin "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[25-07-2015 22:24:49] [INFO] Task "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "0" (Module.HelloWorld)
+```
 
 ## Author
 

@@ -1,14 +1,15 @@
-FROM node:0.12.5
+FROM node:0.12.7-slim
 
 RUN dpkg-reconfigure --frontend noninteractive tzdata
 
-RUN npm install -g coffee-script coffeelint grunt-cli bower mocha chai
+RUN apt-get update && \
+    apt-get install -y python make g++ git
 
-WORKDIR /application
-COPY . /application
+WORKDIR /mconn
+COPY . /mconn
 
-RUN npm install && \
-    bower install --allow-root && \
+RUN npm install -g coffee-script coffeelint grunt-cli bower mocha chai coffee-coverage istanbul && \
+    npm install && \
     grunt build
 
 EXPOSE 1234

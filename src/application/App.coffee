@@ -39,17 +39,17 @@ class App
   ,
     name: "MCONN_PATH"
     required: false
-    default: if process.env.JENKINS_HOME then "/jenkins/workspace/mconn/" else "/application"
+    default: "/mconn"
     description: "Path of the modules to be loaded"
   ,
     name: "MCONN_QUEUE_TIMEOUT"
     required: false
-    default: 60000
+    default: 600000
     description: "Timout until a job has to be finished"
   ,
     name: "MCONN_MODULE_PATH"
     required: false
-    default: if process.env.MESOS_SANDBOX then process.env.MESOS_SANDBOX else "/application/modules"
+    default: if process.env.MESOS_SANDBOX then process.env.MESOS_SANDBOX else "/mconn/modules"
     description: "Path of the modules to be loaded"
   ,
     name: "MCONN_MODULE_PREPARE"
@@ -95,12 +95,12 @@ class App
     name: "MCONN_MARATHON_HOSTS"
     required: false
     default: "leader.mesos:8080"
-    description: "Marathon Host (currently only one is supported)"
+    description: "Marathon Host"
   ,
     name: "MCONN_MARATHON_SSL"
     required: false
     default: "false"
-    description: "Marathon-URL is HTTPS (currently not included)"
+    description: "Marathon-URL is HTTPS"
   ]
 
   # delayed requirement of ZookeeperHandler
@@ -118,13 +118,13 @@ class App
         if process.env[e.name]?
           logger.info("ENV \"#{e.name}=" + process.env[e.name] + "\", #{e.description}")
         else if e.required
-          logger.error("No value set for env #{e.name}, but it is required!","")
+          logger.error("No value set for env #{e.name}, but it is required!", "")
           killProcess = true
         else
           process.env[e.name] = e.default
           logger.info("ENV \"#{e.name}=#{e.default}\", default value, #{e.description}")
       if killProcess
-        logger.error("MConn stops because required env-vars are not set","")
+        logger.error("MConn stops because required env-vars are not set", "")
         process.kill()
       return
 
@@ -164,6 +164,7 @@ class App
     # add middlewares
     app.use Middlewares.expressLogger
     app.use Middlewares.appendMasterDataToRequest
+    app.use Middlewares.addBasicAuth
     app.post /v1/, Middlewares.route
     app.get /v1/, Middlewares.route
     app.get "/v1/queue", Middlewares.route
@@ -217,19 +218,24 @@ class App
       # no stacktraces leaked to user
       @app.use (err, req, res, next) ->
         res.status err.status or 500
-        logger.error(err +  ": " + req.url,err.stack)
-        res.send("{\"message\":\"URI not found: " + req.url + "\"}")
+        logger.error(err +  ": " + req.url, err.stack)
+        res.json(
+          message: "URI not found: " + req.url
+        )
         res.end()
 
       http = require('http')
 
-      server = http.createServer(@app).listen(port)
-      io = require('socket.io').listen(server)
-      @app.set("io", io)
-      @registerWebsocketEvents(io)
-      logger.info("Webserver started on \"" + process.env.MCONN_HOST + ":" + port + "\"")
-      logger.info("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
+      #wait for at least one leaderelection to be finished
+      ZookeeperHandler.leaderElectionFinishedOnceDeferred.promise.then =>
+        logger.info("leader election has been finished")
+        server = http.createServer(@app).listen(port)
+        io = require('socket.io').listen(server)
+        @app.set("io", io)
+        @registerWebsocketEvents(io)
+        logger.info("Webserver started on \"" + process.env.MCONN_HOST + ":" + port + "\"")
+        logger.info("MConn \"" + process.env.npm_package_version + "\" is ready to rumble")
     catch error
-      logger.error(error,error.stack)
+      logger.error(error, error.stack)
 
 module.exports = App

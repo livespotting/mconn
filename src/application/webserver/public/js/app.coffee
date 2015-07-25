@@ -14,7 +14,7 @@ this.app = angular.module('app', ['ngRoute'])
 this.connectToNamespace = (namespace, $rootScope) ->
   console.info ("connect to namespace #{namespace}")
   if $rootScope.socket then $rootScope.socket.disconnect()
-  $rootScope.socket = io.connect($(".master-url").data("masterurl") + "/" + namespace, {'forceNew': true})
+  $rootScope.socket = io.connect($(".master-url").data("masterurl") + "/" + namespace, {'forceNew': true, 'secure': true})
   {
   emit: (event, data, callback) ->
     $rootScope.socket .emit event, data, ->

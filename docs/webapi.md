@@ -27,6 +27,8 @@ This is a pre-release! We can't guarantee that something you build today will wo
  * [POST /v1/exit/leader](#post-v1exitleader)
  * [POST /v1/exit/node](#post-v1exitnode)
 
+* [Error-Handling](#errorhandling)
+
 ## Queue
 
 ### GET /v1/queue
@@ -38,7 +40,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 [
     {
         "id": "bridged-webapp.715a2ddb-02f0-11e5-835c-a268d739d527_TASK_RUNNING",
@@ -73,7 +78,7 @@ Request:
 ```sh
 POST /v1/queue HTTP/1.1
 Accept: application/json
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "eventType": "status_update_event",
@@ -92,7 +97,13 @@ Content-Type: application/json; charset=utf-8
 
 Response:
 ```sh
-ok
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "leader": "http://slave1.dev:31999",
+    "taskId": "bridged-webapp.7455ba9d-02f0-11e5-835c-a268d739d527_TASK_RUNNING"
+}
 ```
 
 ## Modules
@@ -106,7 +117,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 [
     {
         "id": "bridged-webapp.28aa2a14-2157-11e5-9e08-56847afe9799",
@@ -137,7 +151,10 @@ Accept: */*
 ```
 
 Response:
-```json
+``` sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "HelloWorld": {
         "name": "HelloWorld",
@@ -212,7 +229,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "name": "HelloWorld",
     "queue": {
@@ -270,7 +290,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 [
     {
         "id": "bridged-webapp.2a7414a6-2157-11e5-9e08-56847afe9799_TASK_KILLED",
@@ -302,7 +325,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "name": "HelloWorld",
     "queue": {
@@ -333,7 +359,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "name": "HelloWorld",
     "queue": {
@@ -364,7 +393,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "HelloWorld": [
         {
@@ -391,7 +423,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 [
     {
         "appId": "/bridged-webapp",
@@ -414,7 +449,7 @@ Request:
 ```sh
 POST /v1/module/preset HTTP/1.1
 Accept: application/json
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "appId": "/bridged-webapp",
@@ -431,7 +466,13 @@ Content-Type: application/json; charset=utf-8
 
 Response:
 ```sh
-ok
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "status": "ok",
+    "message": "AppId for module HelloWorld created: /bridged-webapp"
+}
 ```
 
 ### PUT /v1/module/preset
@@ -440,7 +481,7 @@ Request:
 ```sh
 PUT /v1/module/preset HTTP/1.1
 Accept: application/json
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "appId": "/bridged-webapp",
@@ -457,7 +498,13 @@ Content-Type: application/json; charset=utf-8
 
 Response:
 ```sh
-ok
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "status": "ok",
+    "message": "AppId for module HelloWorld modified: /bridged-webapp"
+}
 ```
 
 ### DELETE /v1/module/preset
@@ -466,7 +513,7 @@ Request:
 ```sh
 DELETE /v1/module/preset HTTP/1.1
 Accept: application/json
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "appId": "/bridged-webapp",
@@ -476,7 +523,13 @@ Content-Type: application/json; charset=utf-8
 
 Response:
 ```sh
-ok
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "status": "ok",
+    "message": "AppId for module HelloWorld deleted: /bridged-webapp"
+}
 ```
 
 ### POST /v1/module/sync
@@ -516,7 +569,10 @@ Accept: */*
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "leader": "slave3.dev:31999",
     "env": {
@@ -546,11 +602,13 @@ Request:
 ```sh
 GET /v1/leader HTTP/1.1
 Accept: */*
-Accept-Encoding: gzip, deflate
 ```
 
 Response:
-```json
+```sh
+HTTP/1.1 200 OK
+Content-Type: application/json
+
 {
     "leader": "slave3.dev:31999"
 }
@@ -566,6 +624,9 @@ Accept: */*
 
 Response:
 ```sh
+HTTP/1.1 200 OK
+Content-Type: text/plain
+
 pong
 ```
 
@@ -579,7 +640,13 @@ Accept: */*
 
 Response:
 ```sh
-ok
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "status": "ok"
+    "message": "Exit leader: slave3.dev:31999"
+}
 ```
 
 ### POST /v1/exit/node
@@ -592,5 +659,67 @@ Accept: */*
 
 Response:
 ```sh
-ok
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+    "status": "ok"
+    "message": "Exit node"
+}
+```
+
+## Error-Handling
+
+Example to detect errors:
+```coffee
+if body?.status? and body.status = "error" then 
+```
+
+### Example for "URI not found"
+
+Request:
+```sh
+GET /v1/undefined HTTP/1.1
+Accept: */*
+```
+
+Response:
+```sh
+HTTP/1.1 404 Not found
+Content-Type: application/json
+
+{
+    "status": "error"
+    "message": "URI not found: /v1/u9ihio"
+}
+```
+
+### Example for "Module not found"
+
+Request:
+```sh
+POST /v1/module/sync/HelloWorld HTTP/1.1
+Accept: */*
+```
+
+Response:
+```sh
+HTTP/1.1 404 Not found
+Content-Type: application/json
+
+{
+    "status": "error"
+    "message": "Module not found: HelloWorld"
+}
+```
+
+Response:
+```sh
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+
+{
+    "status": "error"
+    "message": "Marathon is unreachable"
+}
 ```

@@ -19,6 +19,7 @@ files = _.extend(
 )
 
 module.exports.extraJavascriptFiles = []
+module.exports.extraStyles = []
 
 module.exports.getJavascriptFiles = =>
   js = []
@@ -30,10 +31,12 @@ module.exports.getJavascriptFiles = =>
     js.push(file)
   return js
 
-module.exports.getCssFiles = ->
+module.exports.getCssFiles = =>
   css = []
   for file in files.assets.lib.css
     css.push(file)
   for file in files.assets.css
+    css.push(file)
+  for file in @extraStyles
     css.push(file)
   return css

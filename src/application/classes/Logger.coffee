@@ -82,7 +82,7 @@ class Logger
   # @param [String] Context of log (classname where the log occured)
   #
   error: (message, stack, context = @context) ->
-    if process.env.MCONN_LOGGER_LEsVEL >= LEVEL_ERROR
+    if process.env.MCONN_LOGGER_LEVEL >= LEVEL_ERROR
       if process.env.NODE_ENV is "development" or process.env.MCONN_LOGGER_LEVEL >= LEVEL_DEBUG
         @logMessage(message + stack, context, "ERROR", "red")
       else

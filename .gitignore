@@ -2,9 +2,12 @@ syntax: glob
 .DS_Store
 .idea
 .vagrant
-build/logs
+*.log
+*.orig
+bin
+build
+coverage
 logs
 modules
 node_modules
-*.log
-*.orig
+static/webserver/public/lib

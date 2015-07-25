@@ -1,3 +1,39 @@
+### Changes from 0.0.9 to 0.0.10
+
+- implemented MCONN_MODULE_PREPARE function
+ - now we use "npm install --production" 
+ - "false" needs compiled (or native code) js-files and installed npm-packages
+- implemented the correct MCONN_MARATHON_HOSTS function
+ - now MCONN supports an array of Marathon-Hosts like "admin:password@10.10.10.10:8080,admin:password@10.10.10.11:8080,..."
+- MCONN_MARATHON_SSL function is now implemented
+ - supports HTTPS with a self signed certificate for the sync-function
+- MCONN_QUEUE_TIMEOUT is now usable (will kill each task if the timeout has been reached)
+- added Basic-Auth-Support (user:password)
+ - can be set by env MCONN_CREDENTIALS=user:password
+ - Leader-Proxy will use this too, if activated
+ - "/v1/ping" and "/v1/queue" is unprotected! because the [Marathon-HTTPCallback](https://mesosphere.github.io/marathon/docs/event-bus.html) currently doesn't support Basic-Auth (we try to implement the [Marathon-Event-Stream](https://mesosphere.github.io/marathon/docs/rest-api.html#event-stream) in the future)
+- refactored the TaskStatus-Handling
+ - Module-Class now checks the defined TaskStatus-Handlings of the installed Modules
+ - TaskStatus now can be an "undefiniedStatus" and will close a task without error and an action
+- refactored the QueueManager-Class
+ - TaskStates are no longer be saved on ZK-Store because MConn starts a Marathon-Sync by Leader-Election (reduced the complexity)
+- reintegrate custom Module-CSS (have a look at the HelloWorld-Example)
+- cleanup NODE-Structure
+- cleanup for "/v1/module/list/HelloWorld"
+- cleanup index-class
+- spent more time on the webapi responses
+ - refactored http-messages and status codes
+ - POST /v1/module/sync + /{moduleid} responds after it knows if marathon is reachable
+ - POST/PUT/DELETE /v1/module/preset + /{moduleid} responds after the leader has sent the "ok"
+- refactored the function that checks if the leader is localhost
+- added more integration-tests
+- added more unit-tests
+- updated npm dependencies
+- updated bower packages
+- switched to node:0.12.7-slim (~620mb vs. ~830mb)
+- added new module structure
+
+
 ### Changes from 0.0.8 to 0.0.9
 
 - new env MCONN_LOGGER_LEVEL
@@ -21,6 +57,7 @@
 - updated npm dependencies
 - updated bower packages
 - updated to node v. 0.12.5
+
 
 ### Changes from 0.0.7 to 0.0.8
 

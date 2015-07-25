@@ -1,4 +1,7 @@
 #
+# MConn Framework
+# https://www.github.com/livespotting/mconn
+#
 # @copyright 2015 Livespotting Media GmbH
 # @license Apache-2.0
 #
@@ -12,7 +15,6 @@ Q = require("q")
 zookeeper = require('node-zookeeper-client')
 
 logger = require("./Logger")("QueueManager")
-Module = require("./Module")
 TaskData = require("./TaskData")
 
 # Controlls all incoming marathon tasks by adding them to main-queue and module-queue
@@ -23,87 +25,98 @@ class QueueManager
   @zookeeperHandler: ->
     return require("./ZookeeperHandler")
 
+  @Module: ->
+    return require("./Module")
+
   # total time, after a task has to be finished (todo: this is not activated atm)
-  @timeoutPerTask: 120000
+  @timeoutPerTask: ->
+    if process.env.MCONN_QUEUE_TIMEOUT then  process.env.MCONN_QUEUE_TIMEOUT else 60000
 
   # crate an async queue to hold all the states of modules for each task in one main-task
-  @queue: async.queue (taskData, callback) =>
+  @queue: async.queue (taskData, done) =>
+    modulesFinishedFlag = false
     @activeTask = taskData
     @activeTask.start = new Date().getTime()
     @activeTask.state = "Waiting for all modules"
+    Q.delay(@timeoutPerTask()).then =>
+      if modulesFinishedFlag is false
+        modulesFinishedFlag = true
+        @timeoutHandler(taskData.task)
+        done()
     # wait for all modules to finish work, than finish this task
     Q.allSettled(taskData.modulePromises)
     .then =>
-      if @activeTask
-        @activeTask.stop = new Date().getTime()
-        @activeTask.state = "All modules finished"
+      if modulesFinishedFlag is false
+        modulesFinishedFlag = true
+        @allModulesFinishedHandler(taskData.task)
+        if @activeTask
+          @activeTask.stop = new Date().getTime()
+          @activeTask.state = "finished"
     .catch (error) ->
       logger.error(error.toString(), error.stack)
     .finally ->
-      callback()
+      done()
 
   # add task to queues
   #
   # @param [taskData] taskData taskData to hold the data of the marathon request
-  # @param [Boolean] recovery flag to determine if the task has to be recovered after an app restart
-  # @todo Refactor this method, since it is way to long
-  # @return [Promise]
   #
-  @add: (taskData, recovery = false) ->
+  @add: (taskData) ->
     logger.debug("INFO", "Task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" created on queue")
     promises = []
-
-    # if flag is true, do not recreate a node on zookeeper for this task
-    if recovery
-      promise = Q.resolve()
-    else
-      # save task on zookeeper
-      promise = @zookeeperHandler().createNode("queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus,
-        new Buffer(JSON.stringify(taskData.getData()))
-      , zookeeper.ACL.OPEN, zookeeper.CreateMode.PERSISTENT)
     copiedTaskDataForModules = {}
-    promise.then =>
-      for name, m of Module.modules
-        do (name, m) ->
-          # create a new promise for each task of the modules
-          deferred = Q.defer()
-          promises.push(deferred.promise)
-          taskDataCopy = taskData.copy() # to prevent from sideeffects by call-by-reference, generate a taskData copy for each module
-          # used to track status changes for the main task
-          copiedTaskDataForModules[name] = taskDataCopy
-
-          # add task to module's queue
-          m.addTask(taskDataCopy, ->
-            logger.debug("INFO","Resolving promise of task " + taskData.getData().taskId + "_" + taskData.getData().taskStatus + " for task #{name}")
-            deferred.resolve()
-          )
+    async.each QueueManager.Module().modules, (module, done) ->
+      name = module.name
+      # create a new promise for each task of the modules
+      deferred = Q.defer()
+      promises.push(deferred.promise)
+      taskDataCopy = taskData.copy() # to prevent from sideeffects by call-by-reference, generate a taskData copy for each module
+      # used to track status changes for the main task
+      copiedTaskDataForModules[name] = taskDataCopy
+      # add task to module's queue
+      module.addTask taskDataCopy, ->
+        logger.debug("INFO", "Resolving promise of task \"" + taskData.getData().taskId + "_" + taskData.getData().taskStatus + "\" for module \"#{name}\"")
+        deferred.resolve()
+      done()
+    , =>
       # add task to main queue
-      @queue.push(
+      @queue.push
         task: taskData
         copiedTaskDataForModules: copiedTaskDataForModules
         modulePromises: promises
-      , =>
-        # if all modules have finished work,cleanup task on zookeeper
-        @zookeeperHandler().remove("queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
-        .then  =>
-          logger.debug("INFO", taskData.getData().taskId + " finished, cleaning up")
-          for name, m of Module.modules
-            do (name) =>
-              @zookeeperHandler().remove("modules/#{name}/queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
-              .then ->
-                logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue")
-              .catch (error) ->
-                logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue \"" + error.toString() + "\"", error.stack)
-              .finally =>
-                @WS_SendAllTasks()
-          logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue. Now \"#{@queue.length()}\" tasks in queue")
-        .catch (error) ->
-          logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue \"" + error.toString + "\"", error.stack)
-      )
-      @WS_SendAllTasks()
-    .catch (error) ->
-      logger.error("Could not save task \"{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" on \"modules/#{name}/queue/\", \"" + error.toString() + "\"", error.stack)
-      deferred.resolve()
+
+  @timeoutHandler: (taskData) ->
+    logger.error("Task " + taskData.getData().taskId + "_" + taskData.getData().taskStatus + " ran into timeout.", JSON.stringify(taskData))
+    async.each QueueManager.Module().modules, (module, done) =>
+      name = module.name
+      @zookeeperHandler().remove("modules/#{name}/queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
+      .then ->
+        logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue")
+      .catch (error) ->
+        logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue \"" + error.toString() + "\"", error.stack)
+      .finally =>
+        @WS_SendAllTasks()
+        logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue. Now \"#{@queue.length()}\" tasks in queue")
+        done()
+
+  # Called, when all modules have resolved their promises
+  #
+  # @param [TaskData] taskData
+  #
+  @allModulesFinishedHandler: (taskData) ->
+    # if all modules have finished work,cleanup task on zookeeper
+    logger.debug("INFO", "Task \"" + taskData.getData().taskId + "\" is finished, cleaning up")
+    async.each QueueManager.Module().modules, (module, done) =>
+      name = module.name
+      @zookeeperHandler().remove("modules/#{name}/queue/" + taskData.getData().taskId + "_" + taskData.getData().taskStatus)
+      .then ->
+        logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue")
+      .catch (error) ->
+        logger.error("Could not remove task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from \"#{name}\" queue \"" + error.toString() + "\"", error.stack)
+      .finally =>
+        @WS_SendAllTasks()
+        logger.debug("INFO", "Remove finished task \"#{taskData.getData().taskId}_#{taskData.getData().taskStatus}\" from queue. Now \"#{@queue.length()}\" tasks in queue")
+        done()
 
   # send all tasks to gui
   #
@@ -116,7 +129,7 @@ class QueueManager
     if app? and app.get("io")?
       io = app.get("io")
       modules = require("./Module").modules
-      for modulename,module of modules
+      for modulename, module of modules
         io.of("/#{module.name}").emit("allTasks", taskDatas)
       io.of("/home").emit("allTasks", taskDatas)
     return
@@ -169,7 +182,7 @@ class QueueManager
   @createTaskDataForWebview: ->
     tasksData = new Array()
     # activetask
-    if @activeTask and @activeTask.state isnt "All modules finished"
+    if @activeTask and @activeTask.state isnt "finished"
       task = @processTaskForWebview(@activeTask.task, @activeTask.copiedTaskDataForModules)
       task.active = true
       tasksData.push(task)

@@ -18,7 +18,7 @@
     "type": "git",
     "url": "http://github.com/livespotting/mconn-Test.git"
   },
-  "main": "./module.js",
+  "main": "./bin/module.js",
   "dependencies": {
     "q": "*"
   }

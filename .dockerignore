@@ -1,9 +1,12 @@
-# ignore dockerfiles
-.dockerignore
 Dockerfile
-
-# ignore source repository history
+.dockerignore
+.DS_Store
+.editorconfig
 .git
-
-# ignore other
+.gitignore
+.travis.yml
+bin
+build
 docs
+modules
+node_modules

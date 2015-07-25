@@ -25,13 +25,10 @@ module.exports = (grunt) ->
         files: watchFiles.clientCSS
         tasks: [ 'cssmin' ]
         options: livereload: true
-    csslint:
-      options: csslintrc: '.csslintrc'
-      all: src: watchFiles.clientCSS
     coffeelint:
       app: [ 'src/application/**/*.coffee' ]
       options:
-        configFile: 'build/coffeelint.json'
+        configFile: 'coffeelint.json'
         reporter: 'checkstyle'
     uglify: production:
       options: mangle: true
@@ -62,12 +59,14 @@ module.exports = (grunt) ->
         logConcurrentOutput: true
         limit: 10
     shell:
-      clear: command: 'rm -Rf bin/ && rm -Rf build/logs && mkdir build/logs && echo "removed bin/\nremoved build/logs\ncreated build/logs directory"'
-      executeCoffeelint: command: 'build/coffeelint.sh'
+      clear: command: 'rm -Rf bin/ && rm -Rf build && mkdir build && echo "removed bin/\nremoved build\ncreated build directory"'
+      installBower: command: 'bower install --allow-root'
+      executeCoffeelint: command: 'coffeelint -f coffeelint.json --reporter checkstyle src/application > build/checkstyle-result.xml'
       compileCoffee: command: 'coffee -o bin -c src/application && echo "compiled coffeescript files"'
-      start: command: 'npm start'
-      mocha_tests: command: 'mocha --compilers coffee:coffee-script/register -R xunit > xunit.xml'
-      mocha_tests_cli: command: 'mocha --compilers coffee:coffee-script/register'
+      mocha_tests: command: 'mocha --timeout=5000 --compilers coffee:coffee-script/register'
+      mocha_tests_silent: command: 'export LOGGER_MUTED=true && mocha --timeout=5000 --compilers coffee:coffee-script/register'
+      mocha_tests_xunit: command: 'export LOGGER_MUTED=true && mocha --timeout=5000 --compilers coffee:coffee-script/register -R xunit > build/xunit.xml'
+      mocha_tests_cov: command: 'export LOGGER_MUTED=true && mocha --timeout=5000 --compilers coffee:coffee-script/register --require coffee-coverage/register-istanbul && istanbul report && istanbul report cobertura'
     copy: statics: files: [ {
       expand: true
       cwd: 'static/webserver/'
@@ -103,13 +102,13 @@ module.exports = (grunt) ->
   # Lint task(s).
   grunt.registerTask 'lint', [
     'shell:clear'
-    'csslint'
     'coffeelint'
     'checkstyle'
   ]
   # Build task(s).
   grunt.registerTask 'build', [
     'shell:clear'
+    'shell:installBower'
     'loadConfig'
     'lint'
     'copy'
@@ -118,13 +117,25 @@ module.exports = (grunt) ->
     'uglify'
     'cssmin'
   ]
-  # Test task(s).
-  grunt.registerTask 'test', [
+  # Build and run mocha with process-logging.
+  grunt.registerTask 'dev', [
     'build'
     'shell:mocha_tests'
   ]
-  grunt.registerTask 'test-cli', [
-    'build'
-    'shell:mocha_tests_cli'
+  # Run mocha with process-logging.
+  grunt.registerTask 'test', [
+    'shell:mocha_tests'
+  ]
+  # Run mocha without process-logging.
+  grunt.registerTask 'test-silent', [
+    'shell:mocha_tests_silent'
+  ]
+  # Run mocha and report to xunit.xml
+  grunt.registerTask 'test-xunit', [
+    'shell:mocha_tests_xunit'
+  ]
+  # Run mocha and report code coverage
+  grunt.registerTask 'test-cov', [
+    'shell:mocha_tests_cov'
   ]
   return

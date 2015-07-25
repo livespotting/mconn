@@ -28,7 +28,6 @@ this.app.controller 'tasksController', [
       $rootScope.socket.on 'removeActiveTask', ->
         $scope.activeTask = null
       return
-
     $scope.duration = (timestamp) ->
       return moment().diff(moment(timestamp), "s") + " Sec."
 ]
@@ -36,7 +35,6 @@ this.app.controller 'tasksController', [
 this.app.controller 'NavCtrl', ($scope, $location) ->
   $scope.isActive = (viewLocation) ->
     return viewLocation is $location.path()
-
   $scope.isActiveMainMenu = (viewLocation) ->
     partsVL = viewLocation.split("/")
     partsL = $location.path().split("/")
@@ -44,13 +42,11 @@ this.app.controller 'NavCtrl', ($scope, $location) ->
       return "/" + partsVL[1] + "/" + partsVL[2] is "/" + partsL[1] + "/" + partsL[2]
     else if partsVL.length >= 2
       return "/" + partsVL[1]  is "/" + partsL[1]
-
   $scope.classActive = (viewLocation) ->
     if( $scope.isActive(viewLocation) )
       return 'active'
     else
       return ''
-
   $scope.classActiveMainMenu = (viewLocation) ->
     if( $scope.isActiveMainMenu(viewLocation) )
       return 'active'

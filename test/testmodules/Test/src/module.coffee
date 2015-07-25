@@ -10,13 +10,14 @@
 #
 
 Q = require("q")
-Module = require "../../../bin/classes/Module"
+Module = require "../../../../bin/classes/Module"
 class Test extends Module
 
   timeout: 10000
 
   constructor: ->
     super("Test")
+    @
 
   init: (options, moduleRouter, folder) ->
     Q = require("q")
@@ -52,11 +53,31 @@ class Test extends Module
     .catch (error) =>
       @failed(taskData, callback, error)
 
+  on_UNDEFINED_STATUS: (taskData, modulePreset, callback) ->
+    delay = if process.env.MCONN_MODULE_TEST_DELAY then process.env.MCONN_MODULE_TEST_DELAY else 250
+    Q.delay(delay)
+    .then =>
+      @logger.info("\"" + taskData.getData().taskStatus + "\" is an undefined taskStatus and the task
+        \"" + taskData.getData().taskId + "\" will be proccessed without actions")
+      @undefinedStatus(taskData, callback)
+      @updateInventoryOnGui()
+    .catch (error) =>
+      @failed(taskData, callback, error)
+
   on_TASK_KILLED: (taskData, modulePreset, callback) ->
+    @on_TASK_FAILED(taskData, modulePreset, callback)
+
+  on_TASK_LOST: (taskData, modulePreset, callback) ->
     @on_TASK_FAILED(taskData, modulePreset, callback)
 
   on_TASK_FINISHED: (taskData, modulePreset, callback) ->
     @on_TASK_FAILED(taskData, modulePreset, callback)
+
+  on_TASK_STAGING: (taskData, modulePreset, callback) ->
+    @on_UNDEFINED_STATUS(taskData, modulePreset, callback)
+
+  on_TASK_STARTING: (taskData, modulePreset, callback) ->
+    @on_UNDEFINED_STATUS(taskData, modulePreset, callback)
 
   cleanUpInventory: (result) ->
     @logger.debug("INFO", "Starting inventory cleanup")

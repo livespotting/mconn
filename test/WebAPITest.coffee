@@ -23,198 +23,267 @@ routes = require("../src/application/webserver/routes/index")
 MainApp = require("../src/application/App")
 Manager = require("./utils/ProcessManager")
 
+createMarathonRequestdata = require("./utils/Helper").createMarathonRequestdata
+createPresetRequestdata = require("./utils/Helper").createPresetRequestdata
+webserverIsStarted = require("./utils/Helper").webserverIsStarted
+webserverIsKilled = require("./utils/Helper").webserverIsKilled
+
 isEmpty = (obj) ->
   for k of obj
     if obj.hasOwnProperty(k)
       return false
   true
-check = ( done, f )  ->
+
+check = (done, f)  ->
   try
     f()
     done()
   catch e
     done(e)
+
+environment = (processName, port) ->
+  name: processName
+  MCONN_HOST: "127.0.0.1"
+  MCONN_PORT: port
+  MCONN_CREDENTIALS: ""
+  MCONN_MODULE_PATH: ""
+  MCONN_MODULE_START: ""
+  MCONN_MODULE_TEST_DELAY: 250
+  MCONN_ZK_HOSTS: if process.env.ALIAS_PORT_2181_TCP_ADDR? then process.env.ALIAS_PORT_2181_TCP_ADDR + ":2181" else "127.0.0.1:2181"
+  MCONN_ZK_PATH: "/mconn-dev-webapi"
+  MCONN_ZK_SESSION_TIMEOUT: 1000
+
 mconn1 = null
+
+getShouldBeAnEmtpyObjectOrArray = [
+  "/v1/queue"
+  "/v1/module/list"
+  "/v1/module/preset"
+]
+getShouldBeModuleNotFound = [
+  "/v1/module/inventory/Test"
+  "/v1/module/list/Test"
+  "/v1/module/queue/list/Test"
+  "/v1/module/preset/Test"
+]
+postShouldBeModuleNotFound = [
+  "/v1/module/queue/pause/Test"
+  "/v1/module/queue/resume/Test"
+  "/v1/module/sync/Test"
+]
+getShouldBe200 = [
+  "/v1/queue"
+  "/v1/module/list"
+  "/v1/module/preset"
+  "/v1/info"
+  "/v1/leader"
+  "/v1/ping"
+]
+getShouldBe404 = [
+  "/v1/module/inventory/Test"
+  "/v1/module/list/Test"
+  "/v1/module/queue/list/Test"
+  "/v1/module/preset/Test"
+  "/v1/module/sync"
+  "/v1/exit/leader"
+  "/v1/exit/node"
+]
+postShouldBe200 = [
+  "/v1/queue"
+  "/v1/module/preset"
+  "/v1/module/sync"
+]
+postShouldBe404 = [
+  "/v1/module/inventory/Test"
+  "/v1/module/list"
+  "/v1/module/queue/list"
+  "/v1/module/queue/pause/Test"
+  "/v1/module/queue/resume/Test"
+  "/v1/module/sync/Test"
+  "/v1/info"
+  "/v1/leader"
+  "/v1/ping"
+]
+putShouldBe200 = [
+  "/v1/module/preset"
+]
+putShouldBe404 = [
+  "/v1/queue"
+  "/v1/module/inventoy"
+  "/v1/module/list"
+  "/v1/module/queue/list"
+  "/v1/module/sync"
+  "/v1/info"
+  "/v1/leader"
+  "/v1/ping"
+  "/v1/exit/leader"
+  "/v1/exit/node"
+]
+deleteShouldBe200 = [
+  "/v1/module/preset"
+]
+deleteShouldBe404 = [
+  "/v1/queue"
+  "/v1/module/inventory"
+  "/v1/module/list"
+  "/v1/module/queue/list"
+  "/v1/module/sync"
+  "/v1/info"
+  "/v1/leader"
+  "/v1/ping"
+  "/v1/exit/leader"
+  "/v1/exit/node"
+]
 
 describe "WebAPI Tests", ->
   before (done) ->
-    this.timeout(30000)
-    mconn1 = new Manager("bin/start.js",
-      name: "MCONN_NODE_1"
-      MCONN_HOST: "127.0.0.1"
-      MCONN_PORT: 1240
-      MCONN_MODULE_START: ""
-      MCONN_MODULE_PATH: __dirname + "/testmodules"
-      MCONN_ZK_HOSTS: if process.env.ALIAS_PORT_2181_TCP_ADDR? then process.env.ALIAS_PORT_2181_TCP_ADDR + ":2181" else "127.0.0.1:2181"
-      MCONN_ZK_PATH: "/mconn-dev"
-    )
-    Q.delay(10000).then -> done()
+    this.timeout(60000)
+    mconn1 = new Manager "bin/start.js", environment("MCONN_NODE_1", 1255)
+    webserverIsStarted(1255).then ->
+      done()
 
-  describe "GET /v1/queue", ->
-    it "should return an empty object", (done) ->
-      request.get "http://127.0.0.1:1240/v1/queue", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(isEmpty(body)).equal(true, "body is " + JSON.stringify(body))
+  describe "test message", ->
+    describe "GET", ->
+      for url in getShouldBeAnEmtpyObjectOrArray
+        do (url) ->
+          it "should return an empty object or array #{url}", (done) ->
+            request.get "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(isEmpty(body)).equal(true, "body is " + JSON.stringify(body))
+      for url in getShouldBeModuleNotFound
+        do (url) ->
+          it "should return status \"error\" and \"Module not found\" #{url}", (done) ->
+            request.get "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(body.status).equal('error')
+                expect(body.message).equal('Module not found: Test')
 
-  describe "POST valid task-json to /v1/queue", ->
-    it "should return status/message 'ok'", (done) ->
-      options =
-        uri: "http://127.0.0.1:1240/v1/queue"
-        method: "POST"
-        json:
-          taskId: "app"
-          taskStatus: "TASK_RUNNING"
-          appId: "/app"
-          host: "slave1"
-          ports: [1234]
-          eventType: "status_update_event"
-          timestamp: new Date().getTime()
-      request options, (error, req, body) ->
-        check done, ->
-          expect(body.status).equal('ok')
+    describe "POST", ->
+      for url in postShouldBeModuleNotFound
+        do (url) ->
+          it "should return status \"error\" and \"Module not found\" #{url}", (done) ->
+            request.post "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(body.status).equal('error')
+                expect(body.message).equal('Module not found: Test')
 
-  describe "POST invalid task-json (unknown eventType) to /v1/queue", ->
-    it "should return status/message 'warning'", (done) ->
-      options =
-        uri: "http://127.0.0.1:1240/v1/queue"
-        method: "POST"
-        json:
-          taskId: "app"
-          taskStatus: "TASK_RUNNING"
-          appId: "/app"
-          host: "slave1"
-          ports: [1234]
-          eventType: "custom_event"
-          timestamp: new Date().getTime()
-      request options, (error, req, body) ->
-        check done, ->
-          expect(body.status).equal('warning')
-
-  describe "GET /v1/module/list", ->
-    it "should return an empty object", (done) ->
-      request.get "http://127.0.0.1:1240/v1/module/list", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(isEmpty(body)).equal(true)
-
-  describe "GET /v1/module/list/HelloWorld", ->
-    it "should return with status-code 500", (done) ->
-      request.get "http://127.0.0.1:1240/v1/module/list/HelloWorld", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(req.statusCode).equal(500)
-
-  describe "POST /v1/module/preset", ->
-    it "should return error 'Module HelloWorld is not enabled'", (done) ->
-      options =
-        uri: "http://127.0.0.1:1240/v1/module/preset"
-        method: "POST"
-        json:
-          appId: "/app"
-          moduleName: "HelloWorld"
-          status: "enabled"
-          options:
-            actions:
-              add: "Moin, Moin"
-              remove: "Tschues"
-      request options, (error, req, body) ->
-        check done, ->
-          expect(body.result.errors[0]).equal('Module "HelloWorld" is not enabled - skipping preset for app "app"')
-
-  describe "PUT /v1/module/preset", ->
-    it "should be error, Module HelloWorld is not enabled", (done) ->
-      options =
-        uri: "http://127.0.0.1:1240/v1/module/preset"
-        method: "PUT"
-        json:
-          appId: "/app"
-          moduleName: "HelloWorld"
-          status: "disabled"
-      request options, (error, req, body) ->
-        check done, ->
-          expect(body.result.errors[0]).equal('Module "HelloWorld" is not enabled - skipping preset for app "app"')
-
-  describe "GET /v1/module/preset", ->
-    it "should be empty object", (done) ->
-      request.get "http://127.0.0.1:1240/v1/module/preset", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(isEmpty(body)).equal(true)
-
-  describe "DELETE /v1/module/preset", ->
-    it "should be error, Module HelloWorld is not enabled", (done) ->
-      options =
-        uri: "http://127.0.0.1:1240/v1/module/preset"
-        method: "DELETE"
-        json:
-          appId: "/app"
-          moduleName: "HelloWorld"
-      request options, (error, req, body) ->
-        check done, ->
-          expect(body.result.errors[0]).equal('Error removing preset /app for  "HelloWorld" "Exception: NO_NODE[-101]": not found')
-
-  describe "GET /v1/module/sync", ->
-    it "should be status code 404", (done) ->
-      request.get "http://127.0.0.1:1240/v1/module/sync", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(req.statusCode).equal(404)
-
-  describe "POST /v1/module/sync", ->
-    it "should be status code 200", (done) ->
-      request.post "http://127.0.0.1:1240/v1/module/sync", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(req.statusCode).equal(200)
-
-  describe "GET /v1/module/sync/HelloWorld", ->
-    it "should be status code 404", (done) ->
-      request.get "http://127.0.0.1:1240/v1/module/sync/HelloWorld", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(req.statusCode).equal(404)
-
-  describe "POST /v1/module/sync/HelloWorld", ->
-    it "should be error, Module HelloWorld unkown or not active", (done) ->
-      request.post "http://127.0.0.1:1240/v1/module/sync/HelloWorld", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(body.error).equal('Module HelloWorld unkown or not active')
-
-  describe "GET /v1/info", ->
-    body = null
-    before (done) ->
-      request.get "http://127.0.0.1:1240/v1/info", {json: true}, (error, req, infobody) ->
-        body = infobody
-        done()
-    vars = MainApp.env_vars
-    for e in vars
-      do (e) ->
-        it "should return env " + e.name, (done) ->
+  describe "test custom or complex message", ->
+    describe "POST valid task to /v1/queue", ->
+      it "should return taskId 'app_1234_TASK_RUNNING' and leader 'http://127.0.0.1:1255", (done) ->
+        request createMarathonRequestdata(1255, "/app", "app_1234"), (error, req, body) ->
           check done, ->
-            expect(body.env[e.name]?).equal(true)
-    it "should return the current leader", (done) ->
-      check done, ->
-        expect(body.leader?).equal(true)
+            expect(body.leader).equal('http://127.0.0.1:1255')
+            expect(body.taskId).equal('app_1234_TASK_RUNNING')
 
-  describe "GET /v1/leader", ->
-    it "should return the current leader", (done) ->
-      request.get "http://localhost:1240/v1/leader", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(body.leader).equal('127.0.0.1:1240')
+    describe "POST invalid task (unknown eventType) to /v1/queue", ->
+      it "should return status \"error\" and message 'rejected'", (done) ->
+        request createMarathonRequestdata(1255, "/app", "app_" + new Date().getTime(), "TASK_RUNNING", "custom_event"), (error, req, body) ->
+          check done, ->
+            expect(body.status).equal('error')
+            expect(body.message).equal('EventType has been rejected: custom_event')
 
-  describe "GET /v1/ping", ->
-    it "should be 'pong'", (done) ->
-      request.get "http://127.0.0.1:1240/v1/ping", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(body).equal('pong')
+    describe "POST /v1/module/preset", ->
+      it "should return status \"error\" and \"Module not found\"'", (done) ->
+        request createPresetRequestdata(1255, "/app", "Test"), (error, req, body) ->
+          check done, ->
+            expect(body.status).equal('error')
+            expect(body.message).equal('Module not found: Test')
 
-  describe "GET /v1/exit/node", ->
-    it "should be status code 404", (done) ->
-      request.get "http://127.0.0.1:1240/v1/exit/node", {json: true}, (error, req, body) ->
-        check done, ->
-          expect(req.statusCode).equal(404)
+    describe "PUT /v1/module/preset", ->
+      it "should return status \"error\" and \"Module not found\"'", (done) ->
+        request createPresetRequestdata(1255, "/app", "Test", "disabled", "PUT"), (error, req, body) ->
+          check done, ->
+            expect(body.status).equal('error')
+            expect(body.message).equal('Module not found: Test')
 
-  describe "GET /v1/exit/leader", ->
-    it "should be status code 404", (done) ->
-      request.get "http://127.0.0.1:1240/v1/exit/leader", {json: true}, (error, req, body) ->
+
+    describe "GET /v1/info", ->
+      body = null
+      before (done) ->
+        request.get "http://127.0.0.1:1255/v1/info", {json: true}, (error, req, infobody) ->
+          body = infobody
+          done()
+      vars = MainApp.env_vars
+      for e in vars
+        do (e) ->
+          it "should return env " + e.name, (done) ->
+            check done, ->
+              expect(body.env[e.name]?).equal(true)
+      it "should return the current leader", (done) ->
         check done, ->
-          expect(req.statusCode).equal(404)
+          expect(body.leader?).equal(true)
+
+    describe "GET /v1/leader", ->
+      it "should return the current leader", (done) ->
+        request.get "http://localhost:1255/v1/leader", {json: true}, (error, req, body) ->
+          check done, ->
+            expect(body.leader).equal('127.0.0.1:1255')
+
+    describe "GET /v1/ping", ->
+      it "should be 'pong'", (done) ->
+        request.get "http://127.0.0.1:1255/v1/ping", {json: true}, (error, req, body) ->
+          check done, ->
+            expect(body).equal('pong')
+
+  describe "test status codes", ->
+    describe "GET", ->
+      for url in getShouldBe200
+        do (url) ->
+          it "should return statusCode 200 on #{url}", (done) ->
+            request.get "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(200)
+      for url in getShouldBe404
+        do (url) ->
+          it "should return statusCode 404 on #{url}", (done) ->
+            request.get "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(404)
+
+    describe "POST", ->
+      for url in postShouldBe200
+        do (url) ->
+          it "should return statusCode 200 on #{url}", (done) ->
+            request.post "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(200)
+      for url in postShouldBe404
+        do (url) ->
+          it "should return statusCode 404 on #{url}", (done) ->
+            request.post "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(404)
+
+    describe "PUT", ->
+      for url in putShouldBe200
+        do (url) ->
+          it "should return statusCode 200 on #{url}", (done) ->
+            request.put "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(200)
+      for url in putShouldBe404
+        do (url) ->
+          it "should return statusCode 404 on #{url}", (done) ->
+            request.put "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(404)
+
+    describe "DELETE", ->
+      for url in deleteShouldBe200
+        do (url) ->
+          it "should return statusCode 200 on #{url}", (done) ->
+            request.del "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(200)
+      for url in deleteShouldBe404
+        do (url) ->
+          it "should return statusCode 404 on #{url}", (done) ->
+            request.del "http://127.0.0.1:1255" + url, {json: true}, (error, req, body) ->
+              check done, ->
+                expect(req.statusCode).equal(404)
 
   after (done) ->
     this.timeout(6000)
     mconn1.kill()
-    Q.delay(5000).then -> done()
+    webserverIsKilled(1255).then ->
+      done()

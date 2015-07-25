@@ -22,4 +22,4 @@ App.checkEnvironment()
 .then ->
   App.startWebserver()
 .catch (error) ->
-  logger.error(error,error.stack)
+  logger.error(error, error.stack)
