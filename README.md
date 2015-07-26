@@ -183,7 +183,7 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
     ]
 }'
 ```
-[![MConn UI DemoApp](docs/img/readme-ui-3.png)](https://github.com/datarhei/mconn)
+[![MConn UI DemoApp](docs/img/readme-ui-3.gif)](https://github.com/datarhei/mconn)
 
 Or see STDOUT on Mesos-Slave Sandbox:
 ```sh
