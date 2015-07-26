@@ -160,9 +160,9 @@ class Middlewares
       url = (req.originalUrl || req.url)
       method = req.method
       if len isnt ''
-        logger.info("#{method} \"#{url}\" #{code} #{duration}ms, #{req.ip}")
+        logger.info("#{method} \"#{url}\" #{code} #{duration} #{req.ip}")
       else
-        logger.info("#{method} \"#{url}\" #{code} #{duration}ms, #{req.ip}")
+        logger.info("#{method} \"#{url}\" #{code} #{duration} #{req.ip}")
     res.on "finish", log
     res.on "close", log
     next()
