@@ -185,24 +185,24 @@ curl -X POST -H "Accept: application/json" -H "Content-Type: application/json" \
 ```
 [![MConn UI DemoApp](docs/img/readme-ui-3.gif)](https://github.com/datarhei/mconn)
 
-Or see STDOUT on Mesos-Slave Sandbox:
+Or Mesos-Slave/Sandbox/Stdout:
 ```sh
-[25-07-2015 22:24:44] [INFO] Task "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
-[25-07-2015 22:24:44] [INFO] Task "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
-[25-07-2015 22:24:44] [INFO] Starting worker for task "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
-[25-07-2015 22:24:45] [INFO] Task "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
-[25-07-2015 22:24:45] [INFO] Task "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
-[25-07-2015 22:24:45] [INFO] Moin, Moin "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
-[25-07-2015 22:24:45] [INFO] Task "bridged-webapp.2f5ed900-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "3" (Module.HelloWorld)
-[25-07-2015 22:24:45] [INFO] Starting worker for task "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
-[25-07-2015 22:24:47] [INFO] Moin, Moin "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
-[25-07-2015 22:24:47] [INFO] Task "bridged-webapp.2f5eb1ef-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "2" (Module.HelloWorld)
-[25-07-2015 22:24:47] [INFO] Starting worker for task "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
-[25-07-2015 22:24:48] [INFO] Moin, Moin "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
-[25-07-2015 22:24:48] [INFO] Task "bridged-webapp.2f5e63ce-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "1" (Module.HelloWorld)
-[25-07-2015 22:24:48] [INFO] Starting worker for task "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
-[25-07-2015 22:24:49] [INFO] Moin, Moin "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318" (Module.HelloWorld)
-[25-07-2015 22:24:49] [INFO] Task "bridged-webapp.2f5f0011-330b-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "0" (Module.HelloWorld)
+[26-07-2015 18:36:35] [INFO] Task "bridged-webapp.8c6a13a9-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[26-07-2015 18:36:35] [INFO] Task "bridged-webapp.8c6a3aba-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[26-07-2015 18:36:35] [INFO] Starting worker for task "bridged-webapp.8c6a13a9-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[26-07-2015 18:36:36] [INFO] Task "bridged-webapp.8c6a61cb-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[26-07-2015 18:36:36] [INFO] Task "bridged-webapp.8c69ec98-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" created on queue (Module.HelloWorld)
+[26-07-2015 18:36:36] [INFO] Moin, Moin "bridged-webapp.8c6a13a9-33b4-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[26-07-2015 18:36:36] [INFO] Task "bridged-webapp.8c6a13a9-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "3" (Module.HelloWorld)
+[26-07-2015 18:36:36] [INFO] Starting worker for task "bridged-webapp.8c6a3aba-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[26-07-2015 18:36:37] [INFO] Moin, Moin "bridged-webapp.8c6a3aba-33b4-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[26-07-2015 18:36:37] [INFO] Task "bridged-webapp.8c6a3aba-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "2" (Module.HelloWorld)
+[26-07-2015 18:36:37] [INFO] Starting worker for task "bridged-webapp.8c6a61cb-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[26-07-2015 18:36:38] [INFO] Moin, Moin "bridged-webapp.8c6a61cb-33b4-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[26-07-2015 18:36:38] [INFO] Task "bridged-webapp.8c6a61cb-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "1" (Module.HelloWorld)
+[26-07-2015 18:36:38] [INFO] Starting worker for task "bridged-webapp.8c69ec98-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" (Module.HelloWorld)
+[26-07-2015 18:36:39] [INFO] Moin, Moin "bridged-webapp.8c69ec98-33b4-11e5-a556-2edad0a36318" (Module.HelloWorld)
+[26-07-2015 18:36:39] [INFO] Task "bridged-webapp.8c69ec98-33b4-11e5-a556-2edad0a36318_TASK_RUNNING" state changed to "finished"! Task Queue is now "0" (Module.HelloWorld)
 ```
 
 ## Author
