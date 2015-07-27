@@ -10,7 +10,7 @@ This is a pre-release for friends and colleagues to check code styles, functions
 
 MConn is an in [Coffee-Script](http://coffeescript.org) written HA Queue combined with a module management to work as an event-subscriber behind Mesosphere's [Marathon](https://github.com/mesosphere/marathon) to react on incoming task events and realize simple post processes (for Service-Discovery-Solutions) based on up/down scalings.
 
-[![Workflows](docs/img/mconn_example.png)](https://github.com/livespotting/mconn)
+[![Workflows](docs/img/mconn_example.gif)](https://github.com/livespotting/mconn)
 
 One of our targets has been a framework design that provides numerous custom post processes without wasting time on the individuell application of the Marathon-Handling, the HA and the fault-tolerance.
 
