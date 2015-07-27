@@ -1,0 +1,11 @@
+.row
+    .col-sm-12
+        ul.nav.navbar-nav.navbar-module(ng-controller="NavCtrl")
+            li(ng-class="classActive('/modules/Test/main')")
+                a(href='/#/modules/Test/main', role='button') Inventory
+            li(ng-class="classActive('/modules/Test/queue')")
+                a(href='/#/modules/Test/queue', role='button') Job Queue
+            li(ng-class="classActive('/modules/Test/presets')")
+                a(href='/#/modules/Test/presets', role='button') Presets
+    .col-sm-12
+        block right
