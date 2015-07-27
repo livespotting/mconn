@@ -63,10 +63,10 @@ module.exports = (grunt) ->
       installBower: command: 'bower install --allow-root'
       executeCoffeelint: command: 'coffeelint -f coffeelint.json --reporter checkstyle src/application > build/checkstyle-result.xml'
       compileCoffee: command: 'coffee -o bin -c src/application && echo "compiled coffeescript files"'
-      mocha_tests: command: 'mocha --timeout=5000 --compilers coffee:coffee-script/register'
-      mocha_tests_silent: command: 'export LOGGER_MUTED=true && mocha --timeout=5000 --compilers coffee:coffee-script/register'
-      mocha_tests_xunit: command: 'export LOGGER_MUTED=true && mocha --timeout=5000 --compilers coffee:coffee-script/register -R xunit > build/xunit.xml'
-      mocha_tests_cov: command: 'export LOGGER_MUTED=true && mocha --timeout=5000 --compilers coffee:coffee-script/register --require coffee-coverage/register-istanbul && istanbul report && istanbul report cobertura'
+      mocha_tests: command: 'mocha --timeout=10000 --compilers coffee:coffee-script/register'
+      mocha_tests_silent: command: 'export LOGGER_MUTED=true && mocha --timeout=10000 --compilers coffee:coffee-script/register'
+      mocha_tests_xunit: command: 'export LOGGER_MUTED=true && mocha --timeout=10000 --compilers coffee:coffee-script/register -R xunit > build/xunit.xml'
+      mocha_tests_cov: command: 'export LOGGER_MUTED=true && mocha --timeout=10000 --compilers coffee:coffee-script/register --require coffee-coverage/register-istanbul && istanbul report && istanbul report cobertura'
     copy: statics: files: [ {
       expand: true
       cwd: 'static/webserver/'
